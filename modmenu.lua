@@ -68,12 +68,7 @@ local Window = WindUI:CreateWindow({
 --     "Fullscreen",
 -- })
 
--- Create Custom Topbar Buttons
---                        ↓ Name             ↓ Icon          ↓ Callback                           ↓ LayoutOrder
-Window:CreateTopbarButton("MyCustomButton1", "bird",         function() print("clicked 1!") end,  990)
-Window:CreateTopbarButton("MyCustomButton2", "droplet-off",  function() print("clicked 2!") end,  989)
-Window:CreateTopbarButton("MyCustomButton3", "battery-plus", function() Window:ToggleFullscreen() end, 988)
-
+-- Botões customizados removidos - mantendo apenas os padrão (minimizar, expandir, fechar)
 
 Window:EditOpenButton({
     Title = "Open Example UI",
