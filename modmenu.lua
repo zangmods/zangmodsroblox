@@ -143,5 +143,4 @@ tabButtons["Main"]:MouseButton1Click()
 -- Função de abrir/fechar o menu
 IconButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
-    IconButton.Visible = not MainFrame.Visible
 end)
