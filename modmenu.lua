@@ -107,8 +107,9 @@ Tabs.GlassBridge = SectionGames:Tab({ Title = "Glass Bridge", Icon = "square" })
 Tabs.Mingle = SectionGames:Tab({ Title = "Mingle", Icon = "users" })
 Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
 
--- Aba de funções extras
+-- Abas de funções extras
 Tabs.Extra = SectionExtra:Tab({ Title = "Funções Extra", Icon = "wand" })
+Tabs.ESP = SectionExtra:Tab({ Title = "ESP", Icon = "eye" })
 
 -- Funções da aba Extra (SEM DUPLICAÇÃO)
 local SpeedEnabled = false
@@ -174,6 +175,108 @@ Tabs.Extra:Slider({
     end
 })
 
+-- Funções da aba ESP
+local ESPEnabled = false
+local ESPConnections = {}
+local ESPObjects = {}
+
+-- Função para criar ESP Name
+local function createESP(player)
+    if player == Player then return end -- Não criar ESP para si mesmo
+    
+    local function addESP()
+        if player.Character and player.Character:FindFirstChild("Head") then
+            -- Remove ESP existente se houver
+            if ESPObjects[player.Name] then
+                ESPObjects[player.Name]:Destroy()
+                ESPObjects[player.Name] = nil
+            end
+            
+            local head = player.Character.Head
+            local billboard = Instance.new("BillboardGui")
+            local nameLabel = Instance.new("TextLabel")
+            
+            billboard.Name = "ESP_" .. player.Name
+            billboard.Parent = head
+            billboard.Size = UDim2.new(0, 200, 0, 50)
+            billboard.StudsOffset = Vector3.new(0, 2, 0)
+            billboard.AlwaysOnTop = true
+            
+            nameLabel.Parent = billboard
+            nameLabel.Size = UDim2.new(1, 0, 1, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = player.Name
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.TextScaled = true
+            nameLabel.TextStrokeTransparency = 0
+            nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+            nameLabel.Font = Enum.Font.SourceSansBold
+            
+            ESPObjects[player.Name] = billboard
+        end
+    end
+    
+    if player.Character then
+        addESP()
+    end
+    
+    ESPConnections[player.Name] = player.CharacterAdded:Connect(addESP)
+end
+
+-- Função para remover ESP
+local function removeESP(player)
+    if ESPObjects[player.Name] then
+        ESPObjects[player.Name]:Destroy()
+        ESPObjects[player.Name] = nil
+    end
+    
+    if ESPConnections[player.Name] then
+        ESPConnections[player.Name]:Disconnect()
+        ESPConnections[player.Name] = nil
+    end
+end
+
+-- Função para ativar/desativar ESP para todos os jogadores
+local function toggleESP(enabled)
+    ESPEnabled = enabled
+    
+    if enabled then
+        -- Adiciona ESP para todos os jogadores atuais
+        for _, player in pairs(game.Players:GetPlayers()) do
+            createESP(player)
+        end
+        
+        -- Conecta evento para novos jogadores
+        ESPConnections.PlayerAdded = game.Players.PlayerAdded:Connect(createESP)
+        ESPConnections.PlayerRemoving = game.Players.PlayerRemoving:Connect(removeESP)
+    else
+        -- Remove ESP de todos os jogadores
+        for _, player in pairs(game.Players:GetPlayers()) do
+            removeESP(player)
+        end
+        
+        -- Desconecta eventos
+        if ESPConnections.PlayerAdded then
+            ESPConnections.PlayerAdded:Disconnect()
+            ESPConnections.PlayerAdded = nil
+        end
+        if ESPConnections.PlayerRemoving then
+            ESPConnections.PlayerRemoving:Disconnect()
+            ESPConnections.PlayerRemoving = nil
+        end
+    end
+end
+
+-- Toggle ESP Name na aba ESP
+Tabs.ESP:Toggle({
+    Title = "ESP Name",
+    Value = false,
+    Callback = function(state)
+        toggleESP(state)
+        print("ESP Name: " .. tostring(state))
+    end
+})
+
 -- Função para Red Light - Teleportar 500 passos à frente
 local function teleportForward(distance)
     local player = game.Players.LocalPlayer
@@ -206,9 +309,9 @@ Tabs.RedLight:Button({
     end
 })
 
--- Switch simples nas outras abas (exceto Mingle e RedLight)
+-- Switch simples nas outras abas (exceto Mingle, RedLight, Extra e ESP)
 for name, tab in pairs(Tabs) do
-    if name ~= "Mingle" and name ~= "RedLight" and name ~= "Extra" then
+    if name ~= "Mingle" and name ~= "RedLight" and name ~= "Extra" and name ~= "ESP" then
         tab:Toggle({
             Title = "Ativar",
             Value = false,
@@ -283,4 +386,6 @@ Window:SelectTab(1)
 -- function :OnClose()
 Window:OnClose(function()
     print("UI closed.")
+    -- Limpa ESP ao fechar
+    toggleESP(false)
 end)
