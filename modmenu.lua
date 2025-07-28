@@ -29,19 +29,17 @@ end
 local Confirmed = false
 
 WindUI:Popup({
-    Title = "Welcome! Popup Example",
-    Icon = "rbxassetid://129260712070622",
-    IconThemed = true,
-    Content = "This is an Example UI for the " .. gradient("WindUI", Color3.fromHex("#00FF87"), Color3.fromHex("#60EFFF")) .. " Lib",
+    Title = "Bem vindo a Script Beta INK GAME",
+    Content = "BETA DO BETA",
     Buttons = {
         {
-            Title = "Cancel",
+            Title = "sair",
             --Icon = "",
             Callback = function() end,
             Variant = "Secondary", -- Primary, Secondary, Tertiary
         },
         {
-            Title = "Continue",
+            Title = "Continuar",
             Icon = "arrow-right",
             Callback = function() Confirmed = true end,
             Variant = "Primary", -- Primary, Secondary, Tertiary
