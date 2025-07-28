@@ -1,3 +1,5 @@
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/zangmods/zangmodsroblox/main/libs/windui.lua"))()
+
 local WindUI = {
     Window = nil,
     Theme = nil,
