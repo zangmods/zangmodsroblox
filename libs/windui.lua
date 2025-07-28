@@ -1,4 +1,4 @@
--- local WindUI = require("./src/init")
+local WindUI = require("./src/init")
 
 -- Test
 
