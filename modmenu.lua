@@ -176,30 +176,31 @@ Tabs.Extra:Slider({
 })
 
 -- Funções da aba ESP
-local ESPEnabled = false
+local ESPNameEnabled = false
+local ESPHealthEnabled = false
 local ESPConnections = {}
 local ESPObjects = {}
+local HealthConnections = {}
 
 -- Função para criar ESP Name
-local function createESP(player)
+local function createESPName(player)
     if player == Player then return end -- Não criar ESP para si mesmo
     
-    local function addESP()
+    local function addESPName()
         if player.Character and player.Character:FindFirstChild("Head") then
-            -- Remove ESP existente se houver
-            if ESPObjects[player.Name] then
-                ESPObjects[player.Name]:Destroy()
-                ESPObjects[player.Name] = nil
+            -- Remove ESP Name existente se houver
+            if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
+                ESPObjects[player.Name].Name:Destroy()
             end
             
             local head = player.Character.Head
             local billboard = Instance.new("BillboardGui")
             local nameLabel = Instance.new("TextLabel")
             
-            billboard.Name = "ESP_" .. player.Name
+            billboard.Name = "ESP_Name_" .. player.Name
             billboard.Parent = head
-            billboard.Size = UDim2.new(0, 200, 0, 50)
-            billboard.StudsOffset = Vector3.new(0, 2, 0)
+            billboard.Size = UDim2.new(0, 200, 0, 30)
+            billboard.StudsOffset = Vector3.new(0, 2.5, 0) -- Acima da cabeça
             billboard.AlwaysOnTop = true
             
             nameLabel.Parent = billboard
@@ -212,57 +213,213 @@ local function createESP(player)
             nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
             nameLabel.Font = Enum.Font.SourceSansBold
             
-            ESPObjects[player.Name] = billboard
+            if not ESPObjects[player.Name] then
+                ESPObjects[player.Name] = {}
+            end
+            ESPObjects[player.Name].Name = billboard
         end
     end
     
     if player.Character then
-        addESP()
+        addESPName()
     end
     
-    ESPConnections[player.Name] = player.CharacterAdded:Connect(addESP)
+    if not ESPConnections[player.Name] then
+        ESPConnections[player.Name] = {}
+    end
+    ESPConnections[player.Name].Name = player.CharacterAdded:Connect(addESPName)
 end
 
--- Função para remover ESP
-local function removeESP(player)
-    if ESPObjects[player.Name] then
-        ESPObjects[player.Name]:Destroy()
-        ESPObjects[player.Name] = nil
+-- Função para criar ESP Health
+local function createESPHealth(player)
+    if player == Player then return end -- Não criar ESP para si mesmo
+    
+    local function addESPHealth()
+        if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
+            -- Remove ESP Health existente se houver
+            if ESPObjects[player.Name] and ESPObjects[player.Name].Health then
+                ESPObjects[player.Name].Health:Destroy()
+            end
+            
+            local head = player.Character.Head
+            local humanoid = player.Character.Humanoid
+            local billboard = Instance.new("BillboardGui")
+            local healthFrame = Instance.new("Frame")
+            local healthBar = Instance.new("Frame")
+            local healthText = Instance.new("TextLabel")
+            
+            billboard.Name = "ESP_Health_" .. player.Name
+            billboard.Parent = head
+            billboard.Size = UDim2.new(0, 100, 0, 20)
+            billboard.StudsOffset = Vector3.new(0, 1.5, 0) -- Abaixo do nome, acima da cabeça
+            billboard.AlwaysOnTop = true
+            
+            -- Frame de fundo da barra de vida
+            healthFrame.Parent = billboard
+            healthFrame.Size = UDim2.new(1, 0, 0.7, 0)
+            healthFrame.Position = UDim2.new(0, 0, 0, 0)
+            healthFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            healthFrame.BorderSizePixel = 1
+            healthFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+            
+            -- Barra de vida colorida
+            healthBar.Parent = healthFrame
+            healthBar.Size = UDim2.new(humanoid.Health / humanoid.MaxHealth, 0, 1, 0)
+            healthBar.Position = UDim2.new(0, 0, 0, 0)
+            healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Verde
+            healthBar.BorderSizePixel = 0
+            
+            -- Texto da vida
+            healthText.Parent = billboard
+            healthText.Size = UDim2.new(1, 0, 0.3, 0)
+            healthText.Position = UDim2.new(0, 0, 0.7, 0)
+            healthText.BackgroundTransparency = 1
+            healthText.Text = math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
+            healthText.TextColor3 = Color3.fromRGB(255, 255, 255)
+            healthText.TextScaled = true
+            healthText.TextStrokeTransparency = 0
+            healthText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+            healthText.Font = Enum.Font.SourceSans
+            
+            -- Função para atualizar a barra de vida
+            local function updateHealth()
+                if healthBar and healthText and humanoid then
+                    local healthPercent = humanoid.Health / humanoid.MaxHealth
+                    healthBar.Size = UDim2.new(healthPercent, 0, 1, 0)
+                    
+                    -- Muda cor baseado na vida
+                    if healthPercent > 0.6 then
+                        healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Verde
+                    elseif healthPercent > 0.3 then
+                        healthBar.BackgroundColor3 = Color3.fromRGB(255, 255, 0) -- Amarelo
+                    else
+                        healthBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Vermelho
+                    end
+                    
+                    healthText.Text = math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
+                end
+            end
+            
+            -- Conecta evento para atualizar vida
+            if not HealthConnections[player.Name] then
+                HealthConnections[player.Name] = {}
+            end
+            HealthConnections[player.Name].HealthChanged = humanoid.HealthChanged:Connect(updateHealth)
+            
+            if not ESPObjects[player.Name] then
+                ESPObjects[player.Name] = {}
+            end
+            ESPObjects[player.Name].Health = billboard
+        end
     end
     
-    if ESPConnections[player.Name] then
-        ESPConnections[player.Name]:Disconnect()
-        ESPConnections[player.Name] = nil
+    if player.Character then
+        addESPHealth()
+    end
+    
+    if not ESPConnections[player.Name] then
+        ESPConnections[player.Name] = {}
+    end
+    ESPConnections[player.Name].Health = player.CharacterAdded:Connect(addESPHealth)
+end
+
+-- Função para remover ESP Name
+local function removeESPName(player)
+    if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
+        ESPObjects[player.Name].Name:Destroy()
+        ESPObjects[player.Name].Name = nil
+    end
+    
+    if ESPConnections[player.Name] and ESPConnections[player.Name].Name then
+        ESPConnections[player.Name].Name:Disconnect()
+        ESPConnections[player.Name].Name = nil
     end
 end
 
--- Função para ativar/desativar ESP para todos os jogadores
-local function toggleESP(enabled)
-    ESPEnabled = enabled
+-- Função para remover ESP Health
+local function removeESPHealth(player)
+    if ESPObjects[player.Name] and ESPObjects[player.Name].Health then
+        ESPObjects[player.Name].Health:Destroy()
+        ESPObjects[player.Name].Health = nil
+    end
+    
+    if ESPConnections[player.Name] and ESPConnections[player.Name].Health then
+        ESPConnections[player.Name].Health:Disconnect()
+        ESPConnections[player.Name].Health = nil
+    end
+    
+    if HealthConnections[player.Name] and HealthConnections[player.Name].HealthChanged then
+        HealthConnections[player.Name].HealthChanged:Disconnect()
+        HealthConnections[player.Name].HealthChanged = nil
+    end
+end
+
+-- Função para ativar/desativar ESP Name para todos os jogadores
+local function toggleESPName(enabled)
+    ESPNameEnabled = enabled
     
     if enabled then
-        -- Adiciona ESP para todos os jogadores atuais
+        -- Adiciona ESP Name para todos os jogadores atuais
         for _, player in pairs(game.Players:GetPlayers()) do
-            createESP(player)
+            createESPName(player)
         end
         
         -- Conecta evento para novos jogadores
-        ESPConnections.PlayerAdded = game.Players.PlayerAdded:Connect(createESP)
-        ESPConnections.PlayerRemoving = game.Players.PlayerRemoving:Connect(removeESP)
+        if not ESPConnections.PlayerAddedName then
+            ESPConnections.PlayerAddedName = game.Players.PlayerAdded:Connect(createESPName)
+        end
+        if not ESPConnections.PlayerRemovingName then
+            ESPConnections.PlayerRemovingName = game.Players.PlayerRemoving:Connect(removeESPName)
+        end
     else
-        -- Remove ESP de todos os jogadores
+        -- Remove ESP Name de todos os jogadores
         for _, player in pairs(game.Players:GetPlayers()) do
-            removeESP(player)
+            removeESPName(player)
         end
         
         -- Desconecta eventos
-        if ESPConnections.PlayerAdded then
-            ESPConnections.PlayerAdded:Disconnect()
-            ESPConnections.PlayerAdded = nil
+        if ESPConnections.PlayerAddedName then
+            ESPConnections.PlayerAddedName:Disconnect()
+            ESPConnections.PlayerAddedName = nil
         end
-        if ESPConnections.PlayerRemoving then
-            ESPConnections.PlayerRemoving:Disconnect()
-            ESPConnections.PlayerRemoving = nil
+        if ESPConnections.PlayerRemovingName then
+            ESPConnections.PlayerRemovingName:Disconnect()
+            ESPConnections.PlayerRemovingName = nil
+        end
+    end
+end
+
+-- Função para ativar/desativar ESP Health para todos os jogadores
+local function toggleESPHealth(enabled)
+    ESPHealthEnabled = enabled
+    
+    if enabled then
+        -- Adiciona ESP Health para todos os jogadores atuais
+        for _, player in pairs(game.Players:GetPlayers()) do
+            createESPHealth(player)
+        end
+        
+        -- Conecta evento para novos jogadores
+        if not ESPConnections.PlayerAddedHealth then
+            ESPConnections.PlayerAddedHealth = game.Players.PlayerAdded:Connect(createESPHealth)
+        end
+        if not ESPConnections.PlayerRemovingHealth then
+            ESPConnections.PlayerRemovingHealth = game.Players.PlayerRemoving:Connect(removeESPHealth)
+        end
+    else
+        -- Remove ESP Health de todos os jogadores
+        for _, player in pairs(game.Players:GetPlayers()) do
+            removeESPHealth(player)
+        end
+        
+        -- Desconecta eventos
+        if ESPConnections.PlayerAddedHealth then
+            ESPConnections.PlayerAddedHealth:Disconnect()
+            ESPConnections.PlayerAddedHealth = nil
+        end
+        if ESPConnections.PlayerRemovingHealth then
+            ESPConnections.PlayerRemovingHealth:Disconnect()
+            ESPConnections.PlayerRemovingHealth = nil
         end
     end
 end
@@ -272,8 +429,18 @@ Tabs.ESP:Toggle({
     Title = "ESP Name",
     Value = false,
     Callback = function(state)
-        toggleESP(state)
+        toggleESPName(state)
         print("ESP Name: " .. tostring(state))
+    end
+})
+
+-- Toggle ESP Health na aba ESP
+Tabs.ESP:Toggle({
+    Title = "ESP Health",
+    Value = false,
+    Callback = function(state)
+        toggleESPHealth(state)
+        print("ESP Health: " .. tostring(state))
     end
 })
 
@@ -387,5 +554,6 @@ Window:SelectTab(1)
 Window:OnClose(function()
     print("UI closed.")
     -- Limpa ESP ao fechar
-    toggleESP(false)
+    toggleESPName(false)
+    toggleESPHealth(false)
 end)
