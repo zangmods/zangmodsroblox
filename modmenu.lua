@@ -182,6 +182,70 @@ Player.CharacterAdded:Connect(function(newCharacter)
     end
 end)
 
+-- Funções da aba Extra
+local SpeedEnabled = false
+local CurrentSpeed = 16
+local Player = game.Players.LocalPlayer
+local Humanoid = nil
+
+local function updateHumanoid()
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Humanoid = Player.Character.Humanoid
+    end
+end
+
+local function setSpeed(speed)
+    updateHumanoid()
+    if Humanoid then
+        Humanoid.WalkSpeed = speed
+    end
+end
+
+-- Atualiza referência do Humanoid quando o personagem spawna
+Player.CharacterAdded:Connect(function()
+    updateHumanoid()
+    if SpeedEnabled then
+        wait(1) -- Aguarda carregamento
+        setSpeed(CurrentSpeed)
+    end
+end)
+
+-- Inicializa Humanoid
+updateHumanoid()
+
+-- Toggle para ativar/desativar alteração de velocidade
+Tabs.Extra:Toggle({
+    Title = "Alterar Velocidade",
+    Value = false,
+    Callback = function(state)
+        SpeedEnabled = state
+        if state then
+            setSpeed(CurrentSpeed)
+            print("Velocidade ativada: " .. CurrentSpeed)
+        else
+            setSpeed(16) -- Velocidade padrão do Roblox
+            print("Velocidade desativada (padrão: 16)")
+        end
+    end
+})
+
+-- Slider para escolher a velocidade
+Tabs.Extra:Slider({
+    Title = "Velocidade do Personagem",
+    Value = {
+        Min = 1,
+        Max = 100,
+        Default = 16,
+    },
+    Callback = function(value)
+        CurrentSpeed = value
+        if SpeedEnabled then
+            setSpeed(CurrentSpeed)
+        end
+        print("Velocidade definida para: " .. value)
+    end
+})
+
 -- Seleciona a primeira aba
 Window:SelectTab(1)
 
