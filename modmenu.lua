@@ -2,12 +2,8 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 -- Test
 
-
-
 -- Set theme:
 --WindUI:SetTheme("Light")
-
---- EXAMPLE !!!
 
 function gradient(text, startColor, endColor)
     local result = ""
@@ -25,32 +21,6 @@ function gradient(text, startColor, endColor)
 
     return result
 end
-
-local Confirmed = false
-
-WindUI:Popup({
-    Title = "Bem vindo a Script Beta INK GAME",
-    Content = "BETA DO BETA",
-    Buttons = {
-        {
-            Title = "sair",
-            --Icon = "",
-            Callback = function() end,
-            Variant = "Secondary", -- Primary, Secondary, Tertiary
-        },
-        {
-            Title = "Continuar",
-            Icon = "arrow-right",
-            Callback = function() Confirmed = true end,
-            Variant = "Primary", -- Primary, Secondary, Tertiary
-        }
-    }
-})
-
-
-repeat wait() until Confirmed
-
---
 
 local Window = WindUI:CreateWindow({
     Title = "WindUI Library",
