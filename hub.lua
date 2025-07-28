@@ -1,4 +1,4 @@
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/zangmods/zangmodsroblox/main/libs/windui.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/zangmods/zangmodsroblox/main/src/init.lua"))()
 
 local window = WindUI:CreateWindow({
     Title = "Meu Mod Menu",
