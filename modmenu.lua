@@ -32,7 +32,7 @@ local Window = WindUI:CreateWindow({
     Transparent = true,
     Theme = "Dark",
     User = {
-        Enabled = true, -- <- or false
+        Enabled = false, -- <- Desabilitado para remover nome anonymous
         Callback = function() print("clicked") end, -- <- optional
         Anonymous = true -- <- or true
     },
@@ -110,19 +110,99 @@ Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
 -- Aba de funções extras
 Tabs.Extra = SectionExtra:Tab({ Title = "Funções Extra", Icon = "wand" })
 
--- Switch simples em cada aba
-for _, tab in pairs(Tabs) do
-    tab:Toggle({
-        Title = "Ativar",
-        Value = false,
-        Callback = function(state)
-            print(tab.Title .. ": " .. tostring(state))
-        end
-    })
+-- Switch simples nas abas (exceto Mingle)
+for name, tab in pairs(Tabs) do
+    if name ~= "Mingle" then
+        tab:Toggle({
+            Title = "Ativar",
+            Value = false,
+            Callback = function(state)
+                print(tab.Title .. ": " .. tostring(state))
+            end
+        })
+    end
 end
+
+-- Aba Mingle com função especial de atravessar paredes
+local NoClipEnabled = false
+local Player = game.Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local RunService = game:GetService("RunService")
+local NoClipConnection
+
+local function toggleNoClip(enabled)
+    if enabled then
+        NoClipConnection = RunService.Stepped:Connect(function()
+            if Player.Character then
+                for _, part in pairs(Player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    else
+        if NoClipConnection then
+            NoClipConnection:Disconnect()
+        end
+        if Player.Character then
+            for _, part in pairs(Player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end
+
+Tabs.Mingle:Toggle({
+    Title = "Ativar",
+    Value = false,
+    Callback = function(state)
+        print("Mingle: " .. tostring(state))
+    end
+})
+
+Tabs.Mingle:Toggle({
+    Title = "Atravessar Paredes (NoClip)",
+    Value = false,
+    Callback = function(state)
+        NoClipEnabled = state
+        toggleNoClip(state)
+        print("NoClip: " .. tostring(state))
+    end
+})
+
+-- Reconectar NoClip quando o personagem respawnar
+Player.CharacterAdded:Connect(function(newCharacter)
+    Character = newCharacter
+    if NoClipEnabled then
+        wait(1) -- Aguarda um pouco para o personagem carregar completamente
+        toggleNoClip(true)
+    end
+end)
 
 -- Seleciona a primeira aba
 Window:SelectTab(1)
+
+-- Resto do código permanece igual...
+local Tabs = {
+    ParagraphTab = Window:Tab({ Title = "Paragraph", Icon = "file-text" }),
+    ButtonTab = Window:Tab({ Title = "Button", Icon = "mouse-pointer-click" }),
+    CodeTab = Window:Tab({ Title = "Code", Icon = "code" }),
+    ColorPickerTab = Window:Tab({ Title = "Colorpicker", Icon = "palette" }),
+    DialogTab = Window:Tab({ Title = "Dialog", Icon = "message-square" }),
+    NotificationTab = Window:Tab({ Title = "Notification", Icon = "bell" }),
+    ToggleTab = Window:Tab({ Title = "Toggle", Icon = "toggle-left" }),
+    SliderTab = Window:Tab({ Title = "Slider", Icon = "sliders" }),
+    InputTab = Window:Tab({ Title = "Input", Icon = "type" }),
+    KeybindTab = Window:Tab({ Title = "Keybind", Icon = "keyboard" }),
+    DropdownTab = Window:Tab({ Title = "Dropdown", Icon = "chevron-down" }),
+    WindowTab = Window:Tab({ Title = "Window", Icon = "window" }),
+    CreateThemeTab = Window:Tab({ Title = "Create Theme", Icon = "brush" }),
+    Tests = Window:Tab({ Title = "Tests", Icon = "flask" }),
+    ConfigTab = Window:Tab({ Title = "Config", Icon = "settings" }),
+}
 
 Tabs.ParagraphTab:Paragraph({
     Title = "Paragraph with Image & Thumbnail",
