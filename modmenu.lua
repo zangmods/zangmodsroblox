@@ -123,65 +123,42 @@ Window:EditOpenButton({
 
 local Tabs = {}
 
-do
-    Tabs.ElementsSection = Window:Section({
-        Title = "Elements",
-        Opened = true,
-    })
-    
-    Tabs.WindowSection = Window:Section({
-        Title = "Window Management",
-        Icon = "app-window-mac",
-        Opened = true,
-    })
-    
-    Tabs.OtherSection = Window:Section({
-        Title = "Other",
-        Opened = true,
-    })
+-- Seções
+local SectionGames = Window:Section({
+    Title = "Jogos",
+    Opened = true,
+})
 
-    
-    Tabs.ParagraphTab = Tabs.ElementsSection:Tab({ Title = "Paragraph", Icon = "type" })
-    Tabs.ButtonTab = Tabs.ElementsSection:Tab({ Title = "Button", Icon = "mouse-pointer-2", Desc = "Contains interactive buttons for various actions." })
-    Tabs.CodeTab = Tabs.ElementsSection:Tab({ Title = "Code", Icon = "code", Desc = "Displays and manages code snippets." })
-    Tabs.ColorPickerTab = Tabs.ElementsSection:Tab({ Title = "ColorPicker", Icon = "paintbrush", Desc = "Choose and customize colors easily." })
-    Tabs.DialogTab = Tabs.ElementsSection:Tab({ Title = "Dialog", Icon = "message-square", Desc = "Dialog lol" })
-    Tabs.NotificationTab = Tabs.ElementsSection:Tab({ Title = "Notification", Icon = "bell", Desc = "Configure and view notifications." })
-    Tabs.ToggleTab = Tabs.ElementsSection:Tab({ Title = "Toggle", Icon = "toggle-left", Desc = "Switch settings on and off." })
-    Tabs.SliderTab = Tabs.ElementsSection:Tab({ Title = "Slider", Icon = "sliders-horizontal", Desc = "Adjust values smoothly with sliders." })
-    Tabs.InputTab = Tabs.ElementsSection:Tab({ Title = "Input", Icon = "keyboard", Desc = "Accept text and numerical input." })
-    Tabs.KeybindTab = Tabs.ElementsSection:Tab({ Title = "Keybind", Icon = "keyboard-off" })
-    Tabs.DropdownTab = Tabs.ElementsSection:Tab({ Title = "Dropdown", Icon = "chevrons-up-down", Desc = "Select from multiple options." })
-    
-    Tabs.WindowTab = Tabs.WindowSection:Tab({ 
-        Title = "Window and File Configuration", 
-        Icon = "settings", 
-        Desc = "Manage window settings and file configurations.", 
-        ShowTabTitle = true 
+local SectionExtra = Window:Section({
+    Title = "Funções Extras",
+    Opened = true,
+})
+
+-- Abas dos jogos
+Tabs.RedLight = SectionGames:Tab({ Title = "Red Light", Icon = "alert-octagon" })
+Tabs.Dalgona = SectionGames:Tab({ Title = "Dalgona", Icon = "circle" })
+Tabs.TugOfWar = SectionGames:Tab({ Title = "Tug of War", Icon = "git-merge" })
+Tabs.HideAndSeek = SectionGames:Tab({ Title = "Hide and Seek", Icon = "eye-off" })
+Tabs.JumpRope = SectionGames:Tab({ Title = "Jump Rope", Icon = "move" })
+Tabs.GlassBridge = SectionGames:Tab({ Title = "Glass Bridge", Icon = "square" })
+Tabs.Mingle = SectionGames:Tab({ Title = "Mingle", Icon = "users" })
+Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
+
+-- Aba de funções extras
+Tabs.Extra = SectionExtra:Tab({ Title = "Funções Extra", Icon = "wand" })
+
+-- Switch simples em cada aba
+for _, tab in pairs(Tabs) do
+    tab:Toggle({
+        Title = "Ativar",
+        Value = false,
+        Callback = function(state)
+            print(tab.Title .. ": " .. tostring(state))
+        end
     })
-    Tabs.CreateThemeTab = Tabs.WindowSection:Tab({ Title = "Create Theme", Icon = "palette", Desc = "Design and apply custom themes." })
-    
-    Tabs.LongTab = Tabs.OtherSection:Tab({ 
-        Title = "Long and empty tab. with custom icon", 
-        Icon = "rbxassetid://129260712070622", 
-        IconThemed = true, 
-        Desc = "Long Description" 
-    })
-    Tabs.LockedTab = Tabs.OtherSection:Tab({ Title = "Locked Tab", Icon = "lock", Desc = "This tab is locked", Locked = true })
-    Tabs.TabWithoutIcon = Tabs.OtherSection:Tab({ Title = "Tab Without icon", ShowTabTitle = true })
-    Tabs.Tests = Tabs.OtherSection:Tab({ Title = "Tests", Icon = "https://raw.githubusercontent.com/Footagesus/WindUI/main/docs/ui.png", ShowTabTitle = true })
-    
-    
-    Tabs.LastSection = Window:Section({
-        Title = "Section without tabs",
-        --Opened = true,
-    })
-    
-    Tabs.ConfigTab = Window:Tab({ Title = "Config", Icon = "file-cog" })
 end
 
-
-
+-- Seleciona a primeira aba
 Window:SelectTab(1)
 
 Tabs.ParagraphTab:Paragraph({
