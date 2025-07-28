@@ -1,146 +1,147 @@
--- ZANGMODS UI Inspirado em Ringta UI
+-- ZANGMODS UI Estilo RINGTA (feito por ChatGPT + klausmodder)
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
+-- Criar GUI
 local gui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-gui.Name = "ZangModsModern"
+gui.Name = "ZangModsRingtaStyle"
+gui.ResetOnSpawn = false
 
--- Main container
+-- Botão ícone para abrir o menu
+local IconButton = Instance.new("ImageButton")
+IconButton.Size = UDim2.new(0, 50, 0, 50)
+IconButton.Position = UDim2.new(0, 10, 0, 10)
+IconButton.BackgroundTransparency = 1
+IconButton.Image = "rbxassetid://8569322835" -- ícone visual
+IconButton.Parent = gui
+
+-- Janela principal
 local MainFrame = Instance.new("Frame", gui)
-MainFrame.Size = UDim2.new(0, 500, 0, 300)
-MainFrame.Position = UDim2.new(0, 100, 0, 100)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Size = UDim2.new(0, 600, 0, 330)
+MainFrame.Position = UDim2.new(0, 70, 0, 20)
+MainFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+MainFrame.Visible = false
 MainFrame.BorderSizePixel = 0
 
 local UICorner = Instance.new("UICorner", MainFrame)
-UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.CornerRadius = UDim.new(0, 8)
 
--- Header
+-- Header do menu
 local Header = Instance.new("TextLabel", MainFrame)
-Header.Size = UDim2.new(1, 0, 0, 30)
+Header.Size = UDim2.new(1, 0, 0, 50)
 Header.BackgroundTransparency = 1
-Header.Text = "⭐ ZANGMODS\ndiscord.gg/zang"
+Header.Text = "⭐ ZANGMODS\n<discord.gg/zang>"
 Header.TextColor3 = Color3.fromRGB(255, 255, 255)
 Header.Font = Enum.Font.GothamBold
-Header.TextSize = 14
+Header.TextSize = 16
 Header.TextXAlignment = Enum.TextXAlignment.Left
 Header.TextYAlignment = Enum.TextYAlignment.Top
-Header.Position = UDim2.new(0, 10, 0, 5)
+Header.Position = UDim2.new(0, 15, 0, 8)
 
 -- Menu lateral
 local SideMenu = Instance.new("Frame", MainFrame)
-SideMenu.Size = UDim2.new(0, 140, 1, -40)
-SideMenu.Position = UDim2.new(0, 0, 0, 40)
-SideMenu.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+SideMenu.Size = UDim2.new(0, 180, 1, -60)
+SideMenu.Position = UDim2.new(0, 0, 0, 60)
+SideMenu.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+SideMenu.BorderSizePixel = 0
 
 local SideCorner = Instance.new("UICorner", SideMenu)
-SideCorner.CornerRadius = UDim.new(0, 6)
-
-local tabs = {"Main", "ESP", "Teleport", "Config"}
-local tabButtons = {}
-local activeTab = nil
+SideCorner.CornerRadius = UDim.new(0, 8)
 
 -- Conteúdo da aba
-local ContentFrame = Instance.new("Frame", MainFrame)
-ContentFrame.Size = UDim2.new(1, -150, 1, -40)
-ContentFrame.Position = UDim2.new(0, 150, 0, 40)
-ContentFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+local Content = Instance.new("Frame", MainFrame)
+Content.Size = UDim2.new(1, -190, 1, -60)
+Content.Position = UDim2.new(0, 190, 0, 60)
+Content.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
 
-local ContentCorner = Instance.new("UICorner", ContentFrame)
-ContentCorner.CornerRadius = UDim.new(0, 6)
+local ContentCorner = Instance.new("UICorner", Content)
+ContentCorner.CornerRadius = UDim.new(0, 8)
 
--- Função para criar tab
-local function createTabButton(name, posY)
-	local btn = Instance.new("TextButton", SideMenu)
-	btn.Size = UDim2.new(1, 0, 0, 30)
-	btn.Position = UDim2.new(0, 0, 0, posY)
-	btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	btn.Text = name
-	btn.Font = Enum.Font.Gotham
-	btn.TextColor3 = Color3.new(1,1,1)
-	btn.TextSize = 14
+-- Tabela de abas
+local tabs = {
+    {name = "Main", icon = "💡"},
+    {name = "ESP", icon = "🕵️"},
+    {name = "Teleport", icon = "🧭"},
+    {name = "Config", icon = "⚙️"},
+    {name = "Sobre", icon = "📜"},
+}
 
-	local corner = Instance.new("UICorner", btn)
-	corner.CornerRadius = UDim.new(0, 4)
+local activeTab = nil
+local tabButtons = {}
 
-	tabButtons[name] = btn
+-- Criar botões laterais com ícones
+for i, tab in ipairs(tabs) do
+    local btn = Instance.new("TextButton", SideMenu)
+    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.Position = UDim2.new(0, 0, 0, (i - 1) * 40)
+    btn.BackgroundColor3 = Color3.fromRGB(36, 36, 36)
+    btn.Text = tab.icon .. "  " .. tab.name
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+
+    local btnCorner = Instance.new("UICorner", btn)
+    btnCorner.CornerRadius = UDim.new(0, 6)
+
+    tabButtons[tab.name] = btn
+
+    btn.MouseButton1Click:Connect(function()
+        activeTab = tab.name
+        for _, child in pairs(Content:GetChildren()) do
+            if not child:IsA("UICorner") then
+                child:Destroy()
+            end
+        end
+
+        if activeTab == "Main" then
+            local btnNoClip = Instance.new("TextButton", Content)
+            btnNoClip.Size = UDim2.new(0, 200, 0, 35)
+            btnNoClip.Position = UDim2.new(0, 20, 0, 20)
+            btnNoClip.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            btnNoClip.Text = "No Clip: OFF"
+            btnNoClip.TextColor3 = Color3.new(1,1,1)
+            btnNoClip.Font = Enum.Font.Gotham
+            btnNoClip.TextSize = 14
+
+            local on = false
+            btnNoClip.MouseButton1Click:Connect(function()
+                on = not on
+                btnNoClip.Text = "No Clip: " .. (on and "ON" or "OFF")
+            end)
+
+            local corner = Instance.new("UICorner", btnNoClip)
+            corner.CornerRadius = UDim.new(0, 6)
+
+            RunService.Stepped:Connect(function()
+                if on and LocalPlayer.Character then
+                    for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            local label = Instance.new("TextLabel", Content)
+            label.Size = UDim2.new(1, -20, 1, -20)
+            label.Position = UDim2.new(0, 10, 0, 10)
+            label.Text = "Aba \"" .. activeTab .. "\" ainda está vazia."
+            label.TextColor3 = Color3.new(1,1,1)
+            label.Font = Enum.Font.Gotham
+            label.TextSize = 16
+            label.BackgroundTransparency = 1
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.TextYAlignment = Enum.TextYAlignment.Top
+        end
+    end)
 end
 
-for i, name in pairs(tabs) do
-	createTabButton(name, (i - 1) * 35)
-end
+-- Abre com aba Main ativada
+tabButtons["Main"]:MouseButton1Click()
 
--- Botões de exemplo
-local function createButton(text, parent, y)
-	local btn = Instance.new("TextButton", parent)
-	btn.Size = UDim2.new(0, 180, 0, 30)
-	btn.Position = UDim2.new(0, 20, 0, y)
-	btn.Text = text
-	btn.TextColor3 = Color3.new(1,1,1)
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 14
-	btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-
-	local corner = Instance.new("UICorner", btn)
-	corner.CornerRadius = UDim.new(0, 6)
-end
-
--- Toggle de exemplo
-local function createToggle(text, parent, y)
-	local label = Instance.new("TextLabel", parent)
-	label.Size = UDim2.new(0, 200, 0, 30)
-	label.Position = UDim2.new(0, 20, 0, y)
-	label.Text = text
-	label.TextColor3 = Color3.new(1,1,1)
-	label.Font = Enum.Font.Gotham
-	label.TextSize = 14
-	label.BackgroundTransparency = 1
-	label.TextXAlignment = Enum.TextXAlignment.Left
-
-	local toggle = Instance.new("TextButton", parent)
-	toggle.Size = UDim2.new(0, 40, 0, 20)
-	toggle.Position = UDim2.new(0, 220, 0, y + 5)
-	toggle.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-	toggle.Text = "OFF"
-	toggle.Font = Enum.Font.Gotham
-	toggle.TextColor3 = Color3.new(1, 1, 1)
-	toggle.TextSize = 12
-
-	local corner = Instance.new("UICorner", toggle)
-	corner.CornerRadius = UDim.new(0, 10)
-
-	local on = false
-	toggle.MouseButton1Click:Connect(function()
-		on = not on
-		toggle.Text = on and "ON" or "OFF"
-		toggle.BackgroundColor3 = on and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(100, 0, 0)
-	end)
-end
-
--- Exibir conteúdo da aba
-local function showTab(name)
-	for _, child in pairs(ContentFrame:GetChildren()) do
-		if not child:IsA("UICorner") then
-			child:Destroy()
-		end
-	end
-
-	if name == "Main" then
-		createButton("Teleport to End", ContentFrame, 10)
-		createButton("Remove Injury", ContentFrame, 50)
-		createButton("Help Player", ContentFrame, 90)
-		createToggle("Help Player LOOP TILL OFF", ContentFrame, 130)
-	elseif name == "ESP" then
-		createButton("Enable ESP", ContentFrame, 10)
-	end
-end
-
--- Eventos dos botões
-for name, btn in pairs(tabButtons) do
-	btn.MouseButton1Click:Connect(function()
-		showTab(name)
-	end)
-end
-
--- Exibir a primeira aba por padrão
-showTab("Main")
+-- Função de abrir/fechar o menu
+IconButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    IconButton.Visible = not MainFrame.Visible
+end)
