@@ -1,10 +1,5 @@
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
--- Test
-
--- Set theme:
---WindUI:SetTheme("Light")
-
 function gradient(text, startColor, endColor)
     local result = ""
     local length = #text
@@ -32,57 +27,35 @@ local Window = WindUI:CreateWindow({
     Transparent = true,
     Theme = "Dark",
     User = {
-        Enabled = false, -- <- Desabilitado para remover nome anonymous
-        Callback = function() print("clicked") end, -- <- optional
-        Anonymous = true -- <- or true
+        Enabled = false,
+        Callback = function() print("clicked") end,
+        Anonymous = true
     },
     SideBarWidth = 200,
-    -- HideSearchBar = true, -- hides searchbar
-    ScrollBarEnabled = true, -- enables scrollbar
-    -- Background = "rbxassetid://13511292247", -- rbxassetid only
+    ScrollBarEnabled = true,
 })
-
-
--- Window:SetBackgroundImage("rbxassetid://13511292247")
--- Window:SetBackgroundImageTransparency(0.9)
-
-
--- TopBar Edit
-
--- Disable Topbar Buttons
--- Window:DisableTopbarButtons({
---     "Close", 
---     "Minimize", 
---     "Fullscreen",
--- })
-
--- Botões customizados removidos - mantendo apenas os padrão (minimizar, expandir, fechar)
 
 Window:EditOpenButton({
     Title = "Open ZangMods Hub",
     Icon = "monitor",
     CornerRadius = UDim.new(0,16),
     StrokeThickness = 2,
-    Color = ColorSequence.new( -- gradient
-        Color3.fromHex("FF0F7B"), 
+    Color = ColorSequence.new(
+        Color3.fromHex("FF0F7B"),
         Color3.fromHex("F89B29")
     ),
-    --Enabled = false,
     Draggable = true,
 })
 
--- ===== SISTEMA GLOBAL DE FUNÇÕES (SEMPRE ATIVAS) =====
+-- ===== SISTEMA GLOBAL DE FUNÇÕES (SEMPRE ATIVO) =====
 local GlobalSystem = {
-    Active = true, -- Sistema sempre ativo
-    Functions = {}, -- Funções registradas
-    Connections = {}, -- Conexões ativas
+    Functions = {},
 }
 
--- Função para registrar uma função no sistema global
 function GlobalSystem:RegisterFunction(name, func, autoStart)
     self.Functions[name] = {
         func = func,
-        active = autoStart or false,
+        active = false,
         connection = nil
     }
     if autoStart then
@@ -90,52 +63,47 @@ function GlobalSystem:RegisterFunction(name, func, autoStart)
     end
 end
 
--- Função para iniciar uma função
 function GlobalSystem:StartFunction(name)
-    if self.Functions[name] and not self.Functions[name].active then
-        self.Functions[name].active = true
-        if self.Functions[name].func then
-            self.Functions[name].connection = self.Functions[name].func()
-        end
-        print("Função " .. name .. " iniciada (SEMPRE ATIVA)")
+    local fn = self.Functions[name]
+    if fn and not fn.active then
+        fn.active = true
+        fn.connection = fn.func()
+        print("Função " .. name .. " iniciada (SEMPRE ATIVO)")
     end
 end
 
--- Função para parar uma função
 function GlobalSystem:StopFunction(name)
-    if self.Functions[name] and self.Functions[name].active then
-        self.Functions[name].active = false
-        if self.Functions[name].connection then
-            if typeof(self.Functions[name].connection) == "RBXScriptConnection" then
-                self.Functions[name].connection:Disconnect()
-            elseif type(self.Functions[name].connection) == "table" then
-                -- Para múltiplas conexões
-                for _, conn in pairs(self.Functions[name].connection) do
+    local fn = self.Functions[name]
+    if fn and fn.active then
+        fn.active = false
+        if fn.connection then
+            if typeof(fn.connection) == "RBXScriptConnection" then
+                fn.connection:Disconnect()
+            elseif type(fn.connection) == "table" then
+                for _, conn in pairs(fn.connection) do
                     if typeof(conn) == "RBXScriptConnection" then
                         conn:Disconnect()
                     end
                 end
             end
-            self.Functions[name].connection = nil
         end
+        fn.connection = nil
         print("Função " .. name .. " parada")
     end
 end
 
--- Função para limpar todas as funções (apenas ao fechar completamente)
 function GlobalSystem:ClearAll()
-    for name, _ in pairs(self.Functions) do
+    for name in pairs(self.Functions) do
         self:StopFunction(name)
     end
     self.Functions = {}
     print("Sistema Global limpo completamente")
 end
 
--- ===== VARIÁVEIS GLOBAIS =====
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- ===== SISTEMA DE VELOCIDADE (SEMPRE ATIVO) =====
+-- ===== SISTEMA DE VELOCIDADE =====
 local SpeedSettings = {
     Enabled = false,
     CurrentSpeed = 16,
@@ -143,402 +111,191 @@ local SpeedSettings = {
 
 local function CreateSpeedSystem()
     local connections = {}
-    
-    -- Função para aplicar velocidade
-    local function applySpeed()
+    connections.heartbeat = RunService.Heartbeat:Connect(function()
         pcall(function()
             if Player.Character and Player.Character:FindFirstChild("Humanoid") then
                 local humanoid = Player.Character.Humanoid
-                if SpeedSettings.Enabled and humanoid.WalkSpeed ~= SpeedSettings.CurrentSpeed then
-                    humanoid.WalkSpeed = SpeedSettings.CurrentSpeed
-                elseif not SpeedSettings.Enabled and humanoid.WalkSpeed ~= 16 then
-                    humanoid.WalkSpeed = 16
-                end
+                humanoid.WalkSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
             end
         end)
-    end
-    
-    -- Monitoramento contínuo
-    connections.heartbeat = RunService.Heartbeat:Connect(applySpeed)
-    
-    -- Aplicar ao respawnar
+    end)
     connections.characterAdded = Player.CharacterAdded:Connect(function()
         wait(1)
-        applySpeed()
+        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            Player.Character.Humanoid.WalkSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
+        end
     end)
-    
-    -- Aplicar se já há personagem
-    if Player.Character then
-        applySpeed()
-    end
-    
     return connections
 end
+GlobalSystem:RegisterFunction("SpeedSystem", CreateSpeedSystem, true)
 
--- Registrar sistema de velocidade
-GlobalSystem:RegisterFunction("SpeedSystem", CreateSpeedSystem)
-
--- ===== SISTEMA ESP (SEMPRE ATIVO) =====
+-- ===== SISTEMA ESP =====
 local ESPSettings = {
     NameEnabled = false,
     HealthEnabled = false,
 }
+local ESPObjects, ESPConnections, HealthConnections = {}, {}, {}
 
-local ESPObjects = {}
-local ESPConnections = {}
-local HealthConnections = {}
-
--- Função para criar ESP Name
 local function createESPName(player)
     if player == Player then return end
-    
-    local function addESPName()
-        pcall(function()
-            if player.Character and player.Character:FindFirstChild("Head") then
-                -- Remove ESP existente
-                if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
-                    ESPObjects[player.Name].Name:Destroy()
-                end
-                
-                local head = player.Character.Head
-                local billboard = Instance.new("BillboardGui")
-                local nameLabel = Instance.new("TextLabel")
-                
-                billboard.Name = "ESP_Name_" .. player.Name
-                billboard.Parent = head
-                billboard.Size = UDim2.new(0, 200, 0, 30)
-                billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-                billboard.AlwaysOnTop = true
-                
-                nameLabel.Parent = billboard
-                nameLabel.Size = UDim2.new(1, 0, 1, 0)
-                nameLabel.BackgroundTransparency = 1
-                nameLabel.Text = player.Name
-                nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                nameLabel.TextScaled = true
-                nameLabel.TextStrokeTransparency = 0
-                nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                nameLabel.Font = Enum.Font.SourceSansBold
-                
-                if not ESPObjects[player.Name] then
-                    ESPObjects[player.Name] = {}
-                end
-                ESPObjects[player.Name].Name = billboard
-            end
-        end)
-    end
-    
-    if player.Character then
-        addESPName()
-    end
-    
-    if not ESPConnections[player.Name] then
-        ESPConnections[player.Name] = {}
-    end
-    
-    if ESPConnections[player.Name].Name then
-        ESPConnections[player.Name].Name:Disconnect()
-    end
-    ESPConnections[player.Name].Name = player.CharacterAdded:Connect(addESPName)
-end
-
--- Função para criar ESP Health
-local function createESPHealth(player)
-    if player == Player then return end
-    
-    local function addESPHealth()
-        pcall(function()
-            if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
-                -- Remove ESP existente
-                if ESPObjects[player.Name] and ESPObjects[player.Name].Health then
-                    ESPObjects[player.Name].Health:Destroy()
-                end
-                
-                local head = player.Character.Head
-                local humanoid = player.Character.Humanoid
-                local billboard = Instance.new("BillboardGui")
-                local healthFrame = Instance.new("Frame")
-                local healthBar = Instance.new("Frame")
-                local healthText = Instance.new("TextLabel")
-                
-                billboard.Name = "ESP_Health_" .. player.Name
-                billboard.Parent = head
-                billboard.Size = UDim2.new(0, 100, 0, 20)
-                billboard.StudsOffset = Vector3.new(0, 1.5, 0)
-                billboard.AlwaysOnTop = true
-                
-                -- Frame de fundo
-                healthFrame.Parent = billboard
-                healthFrame.Size = UDim2.new(1, 0, 0.7, 0)
-                healthFrame.Position = UDim2.new(0, 0, 0, 0)
-                healthFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                healthFrame.BorderSizePixel = 1
-                healthFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-                
-                -- Barra de vida
-                healthBar.Parent = healthFrame
-                healthBar.Size = UDim2.new(humanoid.Health / humanoid.MaxHealth, 0, 1, 0)
-                healthBar.Position = UDim2.new(0, 0, 0, 0)
-                healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-                healthBar.BorderSizePixel = 0
-                
-                -- Texto da vida
-                healthText.Parent = billboard
-                healthText.Size = UDim2.new(1, 0, 0.3, 0)
-                healthText.Position = UDim2.new(0, 0, 0.7, 0)
-                healthText.BackgroundTransparency = 1
-                healthText.Text = math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
-                healthText.TextColor3 = Color3.fromRGB(255, 255, 255)
-                healthText.TextScaled = true
-                healthText.TextStrokeTransparency = 0
-                healthText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                healthText.Font = Enum.Font.SourceSans
-                
-                -- Atualizar barra de vida
-                local function updateHealth()
-                    pcall(function()
-                        if healthBar and healthText and humanoid then
-                            local healthPercent = humanoid.Health / humanoid.MaxHealth
-                            healthBar.Size = UDim2.new(healthPercent, 0, 1, 0)
-                            
-                            if healthPercent > 0.6 then
-                                healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-                            elseif healthPercent > 0.3 then
-                                healthBar.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
-                            else
-                                healthBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                            end
-                            
-                            healthText.Text = math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
-                        end
-                    end)
-                end
-                
-                if not HealthConnections[player.Name] then
-                    HealthConnections[player.Name] = {}
-                end
-                
-                if HealthConnections[player.Name].HealthChanged then
-                    HealthConnections[player.Name].HealthChanged:Disconnect()
-                end
-                HealthConnections[player.Name].HealthChanged = humanoid.HealthChanged:Connect(updateHealth)
-                
-                if not ESPObjects[player.Name] then
-                    ESPObjects[player.Name] = {}
-                end
-                ESPObjects[player.Name].Health = billboard
-            end
-        end)
-    end
-    
-    if player.Character then
-        addESPHealth()
-    end
-    
-    if not ESPConnections[player.Name] then
-        ESPConnections[player.Name] = {}
-    end
-    
-    if ESPConnections[player.Name].Health then
-        ESPConnections[player.Name].Health:Disconnect()
-    end
-    ESPConnections[player.Name].Health = player.CharacterAdded:Connect(addESPHealth)
-end
-
--- Sistema ESP Name
-local function CreateESPNameSystem()
-    local connections = {}
-    
-    local function refreshESPName()
-        if ESPSettings.NameEnabled then
-            for _, player in pairs(game.Players:GetPlayers()) do
-                createESPName(player)
-            end
-        else
-            -- Remove todos os ESP Names
-            for playerName, objects in pairs(ESPObjects) do
-                if objects.Name then
-                    objects.Name:Destroy()
-                    objects.Name = nil
-                end
-            end
-            -- Desconecta todas as conexões de nome
-            for playerName, conns in pairs(ESPConnections) do
-                if conns.Name then
-                    conns.Name:Disconnect()
-                    conns.Name = nil
-                end
-            end
-        end
-    end
-    
-    connections.playerAdded = game.Players.PlayerAdded:Connect(function(player)
-        if ESPSettings.NameEnabled then
-            createESPName(player)
-        end
-    end)
-    
-    connections.playerRemoving = game.Players.PlayerRemoving:Connect(function(player)
+    if player.Character and player.Character:FindFirstChild("Head") then
         if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
             ESPObjects[player.Name].Name:Destroy()
-            ESPObjects[player.Name].Name = nil
         end
-        if ESPConnections[player.Name] and ESPConnections[player.Name].Name then
-            ESPConnections[player.Name].Name:Disconnect()
-            ESPConnections[player.Name].Name = nil
-        end
-    end)
-    
-    -- Verificação contínua
-    connections.heartbeat = RunService.Heartbeat:Connect(function()
-        if ESPSettings.NameEnabled then
-            for _, player in pairs(game.Players:GetPlayers()) do
-                if player ~= Player and player.Character and player.Character:FindFirstChild("Head") then
-                    if not ESPObjects[player.Name] or not ESPObjects[player.Name].Name or not ESPObjects[player.Name].Name.Parent then
-                        createESPName(player)
-                    end
-                end
-            end
-        end
-    end)
-    
-    refreshESPName()
-    return connections
+        local head = player.Character.Head
+        local billboard = Instance.new("BillboardGui")
+        local nameLabel = Instance.new("TextLabel")
+        billboard.Name = "ESP_Name_" .. player.Name
+        billboard.Parent = head
+        billboard.Size = UDim2.new(0, 200, 0, 30)
+        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+        billboard.AlwaysOnTop = true
+        nameLabel.Parent = billboard
+        nameLabel.Size = UDim2.new(1, 0, 1, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = player.Name
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.TextScaled = true
+        nameLabel.TextStrokeTransparency = 0
+        nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        nameLabel.Font = Enum.Font.SourceSansBold
+        ESPObjects[player.Name] = ESPObjects[player.Name] or {}
+        ESPObjects[player.Name].Name = billboard
+    end
+end
+local function removeESPName(player)
+    if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
+        ESPObjects[player.Name].Name:Destroy()
+        ESPObjects[player.Name].Name = nil
+    end
 end
 
--- Sistema ESP Health
-local function CreateESPHealthSystem()
-    local connections = {}
-    
-    local function refreshESPHealth()
-        if ESPSettings.HealthEnabled then
-            for _, player in pairs(game.Players:GetPlayers()) do
-                createESPHealth(player)
-            end
-        else
-            -- Remove todos os ESP Healths
-            for playerName, objects in pairs(ESPObjects) do
-                if objects.Health then
-                    objects.Health:Destroy()
-                    objects.Health = nil
-                end
-            end
-            -- Desconecta todas as conexões de health
-            for playerName, conns in pairs(ESPConnections) do
-                if conns.Health then
-                    conns.Health:Disconnect()
-                    conns.Health = nil
-                end
-            end
-            for playerName, conns in pairs(HealthConnections) do
-                if conns.HealthChanged then
-                    conns.HealthChanged:Disconnect()
-                    conns.HealthChanged = nil
-                end
-            end
-        end
-    end
-    
-    connections.playerAdded = game.Players.PlayerAdded:Connect(function(player)
-        if ESPSettings.HealthEnabled then
-            createESPHealth(player)
-        end
-    end)
-    
-    connections.playerRemoving = game.Players.PlayerRemoving:Connect(function(player)
+local function createESPHealth(player)
+    if player == Player then return end
+    if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
         if ESPObjects[player.Name] and ESPObjects[player.Name].Health then
             ESPObjects[player.Name].Health:Destroy()
-            ESPObjects[player.Name].Health = nil
         end
-        if ESPConnections[player.Name] and ESPConnections[player.Name].Health then
-            ESPConnections[player.Name].Health:Disconnect()
-            ESPConnections[player.Name].Health = nil
+        local head = player.Character.Head
+        local humanoid = player.Character.Humanoid
+        local billboard = Instance.new("BillboardGui")
+        local frame = Instance.new("Frame")
+        local bar = Instance.new("Frame")
+        local text = Instance.new("TextLabel")
+        billboard.Name = "ESP_Health_" .. player.Name
+        billboard.Parent = head
+        billboard.Size = UDim2.new(0, 100, 0, 20)
+        billboard.StudsOffset = Vector3.new(0, 1.5, 0)
+        billboard.AlwaysOnTop = true
+        frame.Parent = billboard
+        frame.Size = UDim2.new(1, 0, 0.7, 0)
+        frame.Position = UDim2.new(0, 0, 0, 0)
+        frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        frame.BorderSizePixel = 1
+        frame.BorderColor3 = Color3.fromRGB(255,255,255)
+        bar.Parent = frame
+        bar.Size = UDim2.new(humanoid.Health/humanoid.MaxHealth,0,1,0)
+        bar.Position = UDim2.new(0,0,0,0)
+        bar.BackgroundColor3 = Color3.fromRGB(0,255,0)
+        text.Parent = billboard
+        text.Size = UDim2.new(1,0,0.3,0)
+        text.Position = UDim2.new(0,0,0.7,0)
+        text.BackgroundTransparency = 1
+        text.Text = math.floor(humanoid.Health).."/"..math.floor(humanoid.MaxHealth)
+        text.TextColor3 = Color3.fromRGB(255,255,255)
+        text.TextScaled = true
+        text.TextStrokeTransparency = 0
+        text.TextStrokeColor3 = Color3.fromRGB(0,0,0)
+        text.Font = Enum.Font.SourceSans
+        local function updateHealth()
+            if bar and text and humanoid then
+                local pct = humanoid.Health/humanoid.MaxHealth
+                bar.Size = UDim2.new(pct,0,1,0)
+                bar.BackgroundColor3 = pct>0.6 and Color3.fromRGB(0,255,0) or (pct>0.3 and Color3.fromRGB(255,255,0) or Color3.fromRGB(255,0,0))
+                text.Text = math.floor(humanoid.Health).."/"..math.floor(humanoid.MaxHealth)
+            end
         end
         if HealthConnections[player.Name] and HealthConnections[player.Name].HealthChanged then
             HealthConnections[player.Name].HealthChanged:Disconnect()
-            HealthConnections[player.Name].HealthChanged = nil
         end
+        HealthConnections[player.Name] = HealthConnections[player.Name] or {}
+        HealthConnections[player.Name].HealthChanged = humanoid.HealthChanged:Connect(updateHealth)
+        ESPObjects[player.Name] = ESPObjects[player.Name] or {}
+        ESPObjects[player.Name].Health = billboard
+    end
+end
+local function removeESPHealth(player)
+    if ESPObjects[player.Name] and ESPObjects[player.Name].Health then
+        ESPObjects[player.Name].Health:Destroy()
+        ESPObjects[player.Name].Health = nil
+    end
+    if HealthConnections[player.Name] and HealthConnections[player.Name].HealthChanged then
+        HealthConnections[player.Name].HealthChanged:Disconnect()
+        HealthConnections[player.Name].HealthChanged = nil
+    end
+end
+
+local function ESPUpdater()
+    local connections = {}
+    connections.playerAdded = game.Players.PlayerAdded:Connect(function(player)
+        if ESPSettings.NameEnabled then createESPName(player) end
+        if ESPSettings.HealthEnabled then createESPHealth(player) end
     end)
-    
-    -- Verificação contínua
+    connections.playerRemoving = game.Players.PlayerRemoving:Connect(function(player)
+        removeESPName(player)
+        removeESPHealth(player)
+    end)
     connections.heartbeat = RunService.Heartbeat:Connect(function()
-        if ESPSettings.HealthEnabled then
-            for _, player in pairs(game.Players:GetPlayers()) do
-                if player ~= Player and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= Player and player.Character then
+                if ESPSettings.NameEnabled then
+                    if not ESPObjects[player.Name] or not ESPObjects[player.Name].Name or not ESPObjects[player.Name].Name.Parent then
+                        createESPName(player)
+                    end
+                else
+                    removeESPName(player)
+                end
+                if ESPSettings.HealthEnabled then
                     if not ESPObjects[player.Name] or not ESPObjects[player.Name].Health or not ESPObjects[player.Name].Health.Parent then
                         createESPHealth(player)
                     end
+                else
+                    removeESPHealth(player)
                 end
             end
         end
     end)
-    
-    refreshESPHealth()
     return connections
 end
+GlobalSystem:RegisterFunction("ESPSystem", ESPUpdater, true)
 
--- Registrar sistemas ESP
-GlobalSystem:RegisterFunction("ESPNameSystem", CreateESPNameSystem)
-GlobalSystem:RegisterFunction("ESPHealthSystem", CreateESPHealthSystem)
-
--- ===== SISTEMA NOCLIP (SEMPRE ATIVO) =====
-local NoClipSettings = {
-    Enabled = false,
-}
-
+-- ===== SISTEMA NOCLIP =====
+local NoClipSettings = { Enabled = false }
 local function CreateNoClipSystem()
     local connections = {}
-    
     connections.stepped = RunService.Stepped:Connect(function()
-        if NoClipSettings.Enabled then
-            pcall(function()
-                if Player.Character then
-                    for _, part in pairs(Player.Character:GetDescendants()) do
-                        if part:IsA("BasePart") and part.CanCollide then
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            end)
+        if NoClipSettings.Enabled and Player.Character then
+            for _, part in pairs(Player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
         end
     end)
-    
     connections.characterAdded = Player.CharacterAdded:Connect(function()
         wait(1)
-        if NoClipSettings.Enabled then
-            pcall(function()
-                if Player.Character then
-                    for _, part in pairs(Player.Character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            end)
+        if NoClipSettings.Enabled and Player.Character then
+            for _, part in pairs(Player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
         end
     end)
-    
     return connections
 end
-
--- Registrar sistema NoClip
-GlobalSystem:RegisterFunction("NoClipSystem", CreateNoClipSystem)
+GlobalSystem:RegisterFunction("NoClipSystem", CreateNoClipSystem, true)
 
 -- ===== INTERFACE DO USUÁRIO =====
 local Tabs = {}
-
--- Seções
-local SectionGames = Window:Section({
-    Title = "Jogos",
-    Opened = true,
-})
-
-local SectionExtra = Window:Section({
-    Title = "Funções Extras",
-    Opened = true,
-})
-
--- Abas dos jogos
+local SectionGames = Window:Section({ Title = "Jogos", Opened = true })
+local SectionExtra = Window:Section({ Title = "Funções Extras", Opened = true })
 Tabs.RedLight = SectionGames:Tab({ Title = "Red Light", Icon = "alert-octagon" })
 Tabs.Dalgona = SectionGames:Tab({ Title = "Dalgona", Icon = "circle" })
 Tabs.TugOfWar = SectionGames:Tab({ Title = "Tug of War", Icon = "git-merge" })
@@ -547,128 +304,55 @@ Tabs.JumpRope = SectionGames:Tab({ Title = "Jump Rope", Icon = "move" })
 Tabs.GlassBridge = SectionGames:Tab({ Title = "Glass Bridge", Icon = "square" })
 Tabs.Mingle = SectionGames:Tab({ Title = "Mingle", Icon = "users" })
 Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
-
--- Abas de funções extras
 Tabs.Extra = SectionExtra:Tab({ Title = "Funções Extra", Icon = "wand" })
 Tabs.ESP = SectionExtra:Tab({ Title = "ESP", Icon = "eye" })
 
--- ===== CONTROLES DA INTERFACE =====
-
--- Toggle Speed
+-- CONTROLES DA INTERFACE
 Tabs.Extra:Toggle({
     Title = "Alterar Velocidade",
     Value = false,
     Callback = function(state)
         SpeedSettings.Enabled = state
-        if state then
-            GlobalSystem:StartFunction("SpeedSystem")
-        end
         print("Velocidade: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
-
--- Slider Speed
 Tabs.Extra:Slider({
     Title = "Velocidade do Personagem",
-    Value = {
-        Min = 1,
-        Max = 100,
-        Default = 16,
-    },
+    Value = { Min = 1, Max = 100, Default = 16 },
     Callback = function(value)
         SpeedSettings.CurrentSpeed = value
         print("Velocidade definida para: " .. value .. " - SEMPRE ATIVO!")
     end
 })
-
--- Toggle ESP Name - ÚNICA MUDANÇA: Chama refreshESPName quando muda
 Tabs.ESP:Toggle({
     Title = "ESP Name",
     Value = false,
     Callback = function(state)
         ESPSettings.NameEnabled = state
-        -- Força atualização do ESP
-        if GlobalSystem.Functions["ESPNameSystem"] and GlobalSystem.Functions["ESPNameSystem"].connection then
-            -- Chama a função interna de refresh que já existe no sistema
-            if state then
-                for _, player in pairs(game.Players:GetPlayers()) do
-                    createESPName(player)
-                end
-            else
-                for playerName, objects in pairs(ESPObjects) do
-                    if objects.Name then
-                        objects.Name:Destroy()
-                        objects.Name = nil
-                    end
-                end
-                for playerName, conns in pairs(ESPConnections) do
-                    if conns.Name then
-                        conns.Name:Disconnect()
-                        conns.Name = nil
-                    end
-                end
-            end
-        end
         print("ESP Name: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
-
--- Toggle ESP Health - ÚNICA MUDANÇA: Chama refreshESPHealth quando muda
 Tabs.ESP:Toggle({
     Title = "ESP Health",
     Value = false,
     Callback = function(state)
         ESPSettings.HealthEnabled = state
-        -- Força atualização do ESP
-        if GlobalSystem.Functions["ESPHealthSystem"] and GlobalSystem.Functions["ESPHealthSystem"].connection then
-            -- Chama a função interna de refresh que já existe no sistema
-            if state then
-                for _, player in pairs(game.Players:GetPlayers()) do
-                    createESPHealth(player)
-                end
-            else
-                for playerName, objects in pairs(ESPObjects) do
-                    if objects.Health then
-                        objects.Health:Destroy()
-                        objects.Health = nil
-                    end
-                end
-                for playerName, conns in pairs(ESPConnections) do
-                    if conns.Health then
-                        conns.Health:Disconnect()
-                        conns.Health = nil
-                    end
-                end
-                for playerName, conns in pairs(HealthConnections) do
-                    if conns.HealthChanged then
-                        conns.HealthChanged:Disconnect()
-                        conns.HealthChanged = nil
-                    end
-                end
-            end
-        end
         print("ESP Health: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
 
--- Função para Red Light - Teleportar 500 passos à frente
 local function teleportForward(distance)
-    pcall(function()
-        if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
-            local humanoidRootPart = Player.Character.HumanoidRootPart
-            local currentPosition = humanoidRootPart.Position
-            local lookDirection = humanoidRootPart.CFrame.LookVector
-            local newPosition = currentPosition + (lookDirection * distance)
-            
-            humanoidRootPart.CFrame = CFrame.new(newPosition, newPosition + lookDirection)
-            print("Teleportado " .. distance .. " passos à frente!")
-        else
-            print("Erro: Personagem não encontrado!")
-        end
-    end)
+    if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = Player.Character.HumanoidRootPart
+        local pos, dir = hrp.Position, hrp.CFrame.LookVector
+        local newPos = pos + (dir * distance)
+        hrp.CFrame = CFrame.new(newPos, newPos + dir)
+        print("Teleportado " .. distance .. " passos à frente!")
+    else
+        print("Erro: Personagem não encontrado!")
+    end
 end
 
--- Red Light - Toggle e Teleport
 Tabs.RedLight:Toggle({
     Title = "Ativar",
     Value = false,
@@ -676,7 +360,6 @@ Tabs.RedLight:Toggle({
         print("Red Light: " .. tostring(state))
     end
 })
-
 Tabs.RedLight:Button({
     Title = "Teleportar 500 Passos à Frente",
     Callback = function()
@@ -684,7 +367,6 @@ Tabs.RedLight:Button({
     end
 })
 
--- Switch simples nas outras abas (exceto Mingle, RedLight, Extra e ESP)
 for name, tab in pairs(Tabs) do
     if name ~= "Mingle" and name ~= "RedLight" and name ~= "Extra" and name ~= "ESP" then
         tab:Toggle({
@@ -697,7 +379,6 @@ for name, tab in pairs(Tabs) do
     end
 end
 
--- Aba Mingle com NoClip
 Tabs.Mingle:Toggle({
     Title = "Ativar",
     Value = false,
@@ -705,41 +386,21 @@ Tabs.Mingle:Toggle({
         print("Mingle: " .. tostring(state))
     end
 })
-
 Tabs.Mingle:Toggle({
     Title = "Atravessar Paredes (NoClip)",
     Value = false,
     Callback = function(state)
         NoClipSettings.Enabled = state
-        if state then
-            GlobalSystem:StartFunction("NoClipSystem")
-        else
-            GlobalSystem:StopFunction("NoClipSystem")
-            -- Restaura colisão
-            pcall(function()
-                if Player.Character then
-                    for _, part in pairs(Player.Character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = true
-                        end
-                    end
-                end
-            end)
-        end
         print("NoClip: " .. tostring(state) .. " - SEMPRE ATIVO!")
+        if not state and Player.Character then
+            for _, part in pairs(Player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end
     end
 })
 
--- Inicializar sistemas essenciais
-GlobalSystem:StartFunction("SpeedSystem")
-GlobalSystem:StartFunction("ESPNameSystem")
-GlobalSystem:StartFunction("ESPHealthSystem")
-GlobalSystem:StartFunction("NoClipSystem")
-
--- Seleciona a primeira aba
 Window:SelectTab(1)
-
--- Função OnClose - APENAS quando fechar completamente a UI
 Window:OnClose(function()
     print("UI fechada completamente - limpando sistemas...")
     GlobalSystem:ClearAll()
@@ -747,5 +408,5 @@ Window:OnClose(function()
 end)
 
 print("ZangMods Hub carregado com sistemas SEMPRE ATIVOS!")
-print("As funções continuarão funcionando mesmo com a UI minimizada!")
-print("CORREÇÃO FINAL APLICADA: ESP limpa corretamente + NoClip consertado!")
+print("As funções continuam funcionando mesmo minimizando a UI!")
+print("CORREÇÃO FINAL: ESP e NoClip SEMPRE ATIVOS, desacoplados da interface!")
