@@ -26,7 +26,7 @@ local Window = WindUI:CreateWindow({
     Title = "ZangMods Hub",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
-    Author = "Ink Game Beta",
+    Author = "Ink Game Beta v",
     Folder = "CloudHub",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -188,6 +188,31 @@ local ESPObjects = {}
 local ESPConnections = {}
 local HealthConnections = {}
 
+-- Função para limpar ESP de um jogador específico
+local function clearPlayerESP(playerName, espType)
+    if ESPObjects[playerName] and ESPObjects[playerName][espType] then
+        ESPObjects[playerName][espType]:Destroy()
+        ESPObjects[playerName][espType] = nil
+    end
+    
+    if ESPConnections[playerName] and ESPConnections[playerName][espType] then
+        ESPConnections[playerName][espType]:Disconnect()
+        ESPConnections[playerName][espType] = nil
+    end
+    
+    if espType == "Health" and HealthConnections[playerName] and HealthConnections[playerName].HealthChanged then
+        HealthConnections[playerName].HealthChanged:Disconnect()
+        HealthConnections[playerName].HealthChanged = nil
+    end
+end
+
+-- Função para limpar todos os ESP de um tipo
+local function clearAllESP(espType)
+    for playerName, _ in pairs(ESPObjects) do
+        clearPlayerESP(playerName, espType)
+    end
+end
+
 -- Função para criar ESP Name
 local function createESPName(player)
     if player == Player then return end
@@ -196,9 +221,7 @@ local function createESPName(player)
         pcall(function()
             if player.Character and player.Character:FindFirstChild("Head") then
                 -- Remove ESP existente
-                if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
-                    ESPObjects[player.Name].Name:Destroy()
-                end
+                clearPlayerESP(player.Name, "Name")
                 
                 local head = player.Character.Head
                 local billboard = Instance.new("BillboardGui")
@@ -250,9 +273,7 @@ local function createESPHealth(player)
         pcall(function()
             if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
                 -- Remove ESP existente
-                if ESPObjects[player.Name] and ESPObjects[player.Name].Health then
-                    ESPObjects[player.Name].Health:Destroy()
-                end
+                clearPlayerESP(player.Name, "Health")
                 
                 local head = player.Character.Head
                 local humanoid = player.Character.Humanoid
@@ -345,32 +366,9 @@ local function createESPHealth(player)
     ESPConnections[player.Name].Health = player.CharacterAdded:Connect(addESPHealth)
 end
 
--- Sistema ESP Name
+-- Sistema ESP Name (CORRIGIDO)
 local function CreateESPNameSystem()
     local connections = {}
-    
-    local function refreshESPName()
-        if ESPSettings.NameEnabled then
-            for _, player in pairs(game.Players:GetPlayers()) do
-                createESPName(player)
-            end
-        else
-            -- Remove todos os ESP Names
-            for playerName, objects in pairs(ESPObjects) do
-                if objects.Name then
-                    objects.Name:Destroy()
-                    objects.Name = nil
-                end
-            end
-            -- Desconecta todas as conexões de nome
-            for playerName, conns in pairs(ESPConnections) do
-                if conns.Name then
-                    conns.Name:Disconnect()
-                    conns.Name = nil
-                end
-            end
-        end
-    end
     
     connections.playerAdded = game.Players.PlayerAdded:Connect(function(player)
         if ESPSettings.NameEnabled then
@@ -379,17 +377,10 @@ local function CreateESPNameSystem()
     end)
     
     connections.playerRemoving = game.Players.PlayerRemoving:Connect(function(player)
-        if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
-            ESPObjects[player.Name].Name:Destroy()
-            ESPObjects[player.Name].Name = nil
-        end
-        if ESPConnections[player.Name] and ESPConnections[player.Name].Name then
-            ESPConnections[player.Name].Name:Disconnect()
-            ESPConnections[player.Name].Name = nil
-        end
+        clearPlayerESP(player.Name, "Name")
     end)
     
-    -- Verificação contínua
+    -- Verificação contínua apenas se ESP estiver ativo
     connections.heartbeat = RunService.Heartbeat:Connect(function()
         if ESPSettings.NameEnabled then
             for _, player in pairs(game.Players:GetPlayers()) do
@@ -402,42 +393,19 @@ local function CreateESPNameSystem()
         end
     end)
     
-    refreshESPName()
+    -- Aplicar ESP inicial se estiver ativo
+    if ESPSettings.NameEnabled then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            createESPName(player)
+        end
+    end
+    
     return connections
 end
 
--- Sistema ESP Health
+-- Sistema ESP Health (CORRIGIDO)
 local function CreateESPHealthSystem()
     local connections = {}
-    
-    local function refreshESPHealth()
-        if ESPSettings.HealthEnabled then
-            for _, player in pairs(game.Players:GetPlayers()) do
-                createESPHealth(player)
-            end
-        else
-            -- Remove todos os ESP Healths
-            for playerName, objects in pairs(ESPObjects) do
-                if objects.Health then
-                    objects.Health:Destroy()
-                    objects.Health = nil
-                end
-            end
-            -- Desconecta todas as conexões de health
-            for playerName, conns in pairs(ESPConnections) do
-                if conns.Health then
-                    conns.Health:Disconnect()
-                    conns.Health = nil
-                end
-            end
-            for playerName, conns in pairs(HealthConnections) do
-                if conns.HealthChanged then
-                    conns.HealthChanged:Disconnect()
-                    conns.HealthChanged = nil
-                end
-            end
-        end
-    end
     
     connections.playerAdded = game.Players.PlayerAdded:Connect(function(player)
         if ESPSettings.HealthEnabled then
@@ -446,21 +414,10 @@ local function CreateESPHealthSystem()
     end)
     
     connections.playerRemoving = game.Players.PlayerRemoving:Connect(function(player)
-        if ESPObjects[player.Name] and ESPObjects[player.Name].Health then
-            ESPObjects[player.Name].Health:Destroy()
-            ESPObjects[player.Name].Health = nil
-        end
-        if ESPConnections[player.Name] and ESPConnections[player.Name].Health then
-            ESPConnections[player.Name].Health:Disconnect()
-            ESPConnections[player.Name].Health = nil
-        end
-        if HealthConnections[player.Name] and HealthConnections[player.Name].HealthChanged then
-            HealthConnections[player.Name].HealthChanged:Disconnect()
-            HealthConnections[player.Name].HealthChanged = nil
-        end
+        clearPlayerESP(player.Name, "Health")
     end)
     
-    -- Verificação contínua
+    -- Verificação contínua apenas se ESP estiver ativo
     connections.heartbeat = RunService.Heartbeat:Connect(function()
         if ESPSettings.HealthEnabled then
             for _, player in pairs(game.Players:GetPlayers()) do
@@ -473,13 +430,19 @@ local function CreateESPHealthSystem()
         end
     end)
     
-    refreshESPHealth()
+    -- Aplicar ESP inicial se estiver ativo
+    if ESPSettings.HealthEnabled then
+        for _, player in pairs(game.Players:GetPlayers()) do
+            createESPHealth(player)
+        end
+    end
+    
     return connections
 end
 
 -- Registrar sistemas ESP
-GlobalSystem:RegisterFunction("ESPNameSystem", CreateESPNameSystem)
-GlobalSystem:RegisterFunction("ESPHealthSystem", CreateESPHealthSystem)
+GlobalSystem:RegisterFunction("ESPNameSystem", CreateESPNameSystem, true)
+GlobalSystem:RegisterFunction("ESPHealthSystem", CreateESPHealthSystem, true)
 
 -- ===== SISTEMA NOCLIP (SEMPRE ATIVO) =====
 local NoClipSettings = {
@@ -522,7 +485,7 @@ local function CreateNoClipSystem()
 end
 
 -- Registrar sistema NoClip
-GlobalSystem:RegisterFunction("NoClipSystem", CreateNoClipSystem)
+GlobalSystem:RegisterFunction("NoClipSystem", CreateNoClipSystem, true)
 
 -- ===== INTERFACE DO USUÁRIO =====
 local Tabs = {}
@@ -552,7 +515,7 @@ Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
 Tabs.Extra = SectionExtra:Tab({ Title = "Funções Extra", Icon = "wand" })
 Tabs.ESP = SectionExtra:Tab({ Title = "ESP", Icon = "eye" })
 
--- ===== CONTROLES DA INTERFACE =====
+-- ===== CONTROLES DA INTERFACE (CORRIGIDOS) =====
 
 -- Toggle Speed
 Tabs.Extra:Toggle({
@@ -560,9 +523,6 @@ Tabs.Extra:Toggle({
     Value = false,
     Callback = function(state)
         SpeedSettings.Enabled = state
-        if state then
-            GlobalSystem:StartFunction("SpeedSystem")
-        end
         print("Velocidade: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
@@ -581,33 +541,45 @@ Tabs.Extra:Slider({
     end
 })
 
--- Toggle ESP Name
+-- Toggle ESP Name (CORRIGIDO)
 Tabs.ESP:Toggle({
     Title = "ESP Name",
     Value = false,
     Callback = function(state)
         ESPSettings.NameEnabled = state
+        
         if state then
-            GlobalSystem:StartFunction("ESPNameSystem")
+            -- Ativar ESP Name para todos os jogadores
+            for _, player in pairs(game.Players:GetPlayers()) do
+                createESPName(player)
+            end
+            print("ESP Name ATIVADO - SEMPRE ATIVO!")
         else
-            GlobalSystem:StopFunction("ESPNameSystem")
+            -- Desativar ESP Name e limpar todos
+            clearAllESP("Name")
+            print("ESP Name DESATIVADO - Todos os ESP Names removidos!")
         end
-        print("ESP Name: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
 
--- Toggle ESP Health
+-- Toggle ESP Health (CORRIGIDO)
 Tabs.ESP:Toggle({
     Title = "ESP Health",
     Value = false,
     Callback = function(state)
         ESPSettings.HealthEnabled = state
+        
         if state then
-            GlobalSystem:StartFunction("ESPHealthSystem")
+            -- Ativar ESP Health para todos os jogadores
+            for _, player in pairs(game.Players:GetPlayers()) do
+                createESPHealth(player)
+            end
+            print("ESP Health ATIVADO - SEMPRE ATIVO!")
         else
-            GlobalSystem:StopFunction("ESPHealthSystem")
+            -- Desativar ESP Health e limpar todos
+            clearAllESP("Health")
+            print("ESP Health DESATIVADO - Todos os ESP Health removidos!")
         end
-        print("ESP Health: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
 
@@ -657,7 +629,7 @@ for name, tab in pairs(Tabs) do
     end
 end
 
--- Aba Mingle com NoClip
+-- Aba Mingle com NoClip (CORRIGIDO)
 Tabs.Mingle:Toggle({
     Title = "Ativar",
     Value = false,
@@ -671,11 +643,9 @@ Tabs.Mingle:Toggle({
     Value = false,
     Callback = function(state)
         NoClipSettings.Enabled = state
-        if state then
-            GlobalSystem:StartFunction("NoClipSystem")
-        else
-            GlobalSystem:StopFunction("NoClipSystem")
-            -- Restaura colisão
+        
+        if not state then
+            -- Restaura colisão quando desativado
             pcall(function()
                 if Player.Character then
                     for _, part in pairs(Player.Character:GetDescendants()) do
@@ -686,15 +656,10 @@ Tabs.Mingle:Toggle({
                 end
             end)
         end
+        
         print("NoClip: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
-
--- Inicializar sistemas essenciais
-GlobalSystem:StartFunction("SpeedSystem")
-GlobalSystem:StartFunction("ESPNameSystem")
-GlobalSystem:StartFunction("ESPHealthSystem")
-GlobalSystem:StartFunction("NoClipSystem")
 
 -- Seleciona a primeira aba
 Window:SelectTab(1)
@@ -702,9 +667,35 @@ Window:SelectTab(1)
 -- Função OnClose - APENAS quando fechar completamente a UI
 Window:OnClose(function()
     print("UI fechada completamente - limpando sistemas...")
+    
+    -- Limpar todos os ESP
+    clearAllESP("Name")
+    clearAllESP("Health")
+    
+    -- Restaurar velocidade normal
+    SpeedSettings.Enabled = false
+    pcall(function()
+        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            Player.Character.Humanoid.WalkSpeed = 16
+        end
+    end)
+    
+    -- Restaurar colisão
+    NoClipSettings.Enabled = false
+    pcall(function()
+        if Player.Character then
+            for _, part in pairs(Player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end)
+    
     GlobalSystem:ClearAll()
     print("Todos os sistemas foram limpos.")
 end)
 
 print("ZangMods Hub carregado com sistemas SEMPRE ATIVOS!")
 print("As funções continuarão funcionando mesmo com a UI minimizada!")
+print("CORREÇÕES APLICADAS: ESP agora liga/desliga corretamente!")
