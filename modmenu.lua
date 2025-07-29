@@ -26,7 +26,7 @@ local Window = WindUI:CreateWindow({
     Title = "ZangMods Hub",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
-    Author = "Ink Game Beta",
+    Author = "Ink Game Beta v1",
     Folder = "CloudHub",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -71,11 +71,12 @@ Window:EditOpenButton({
     Draggable = true,
 })
 
--- ===== SISTEMA GLOBAL DE FUNÇÕES (SEMPRE ATIVAS) =====
+-- ===== SISTEMA GLOBAL DE FUNÇÕES =====
 local GlobalSystem = {
-    Active = true, -- Sistema sempre ativo
-    Functions = {}, -- Funções registradas
-    Connections = {}, -- Conexões ativas
+    Active = true,
+    Functions = {},
+    Connections = {},
+    Toggles = {} -- Novo: Armazena os estados dos toggles
 }
 
 -- Função para registrar uma função no sistema global
@@ -97,7 +98,7 @@ function GlobalSystem:StartFunction(name)
         if self.Functions[name].func then
             self.Functions[name].connection = self.Functions[name].func()
         end
-        print("Função " .. name .. " iniciada (SEMPRE ATIVA)")
+        print("Função " .. name .. " iniciada")
     end
 end
 
@@ -131,11 +132,29 @@ function GlobalSystem:ClearAll()
     print("Sistema Global limpo completamente")
 end
 
+-- Função para registrar um toggle e seu estado
+function GlobalSystem:RegisterToggle(name, initialValue)
+    self.Toggles[name] = initialValue or false
+end
+
+-- Função para atualizar um toggle
+function GlobalSystem:UpdateToggle(name, value)
+    if self.Toggles[name] ~= nil then
+        self.Toggles[name] = value
+        print("Toggle " .. name .. " atualizado para: " .. tostring(value))
+    end
+end
+
+-- Função para obter o estado de um toggle
+function GlobalSystem:GetToggle(name)
+    return self.Toggles[name] or false
+end
+
 -- ===== VARIÁVEIS GLOBAIS =====
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- ===== SISTEMA DE VELOCIDADE (SEMPRE ATIVO) =====
+-- ===== SISTEMA DE VELOCIDADE =====
 local SpeedSettings = {
     Enabled = false,
     CurrentSpeed = 16,
@@ -177,8 +196,9 @@ end
 
 -- Registrar sistema de velocidade
 GlobalSystem:RegisterFunction("SpeedSystem", CreateSpeedSystem)
+GlobalSystem:RegisterToggle("SpeedToggle", false)
 
--- ===== SISTEMA ESP (SEMPRE ATIVO) =====
+-- ===== SISTEMA ESP =====
 local ESPSettings = {
     NameEnabled = false,
     HealthEnabled = false,
@@ -480,8 +500,10 @@ end
 -- Registrar sistemas ESP
 GlobalSystem:RegisterFunction("ESPNameSystem", CreateESPNameSystem)
 GlobalSystem:RegisterFunction("ESPHealthSystem", CreateESPHealthSystem)
+GlobalSystem:RegisterToggle("ESPNameToggle", false)
+GlobalSystem:RegisterToggle("ESPHealthToggle", false)
 
--- ===== SISTEMA NOCLIP (SEMPRE ATIVO) =====
+-- ===== SISTEMA NOCLIP =====
 local NoClipSettings = {
     Enabled = false,
 }
@@ -523,6 +545,7 @@ end
 
 -- Registrar sistema NoClip
 GlobalSystem:RegisterFunction("NoClipSystem", CreateNoClipSystem)
+GlobalSystem:RegisterToggle("NoClipToggle", false)
 
 -- ===== INTERFACE DO USUÁRIO =====
 local Tabs = {}
@@ -557,13 +580,22 @@ Tabs.ESP = SectionExtra:Tab({ Title = "ESP", Icon = "eye" })
 -- Toggle Speed
 Tabs.Extra:Toggle({
     Title = "Alterar Velocidade",
-    Value = false,
+    Value = GlobalSystem:GetToggle("SpeedToggle"),
     Callback = function(state)
         SpeedSettings.Enabled = state
+        GlobalSystem:UpdateToggle("SpeedToggle", state)
         if state then
             GlobalSystem:StartFunction("SpeedSystem")
+        else
+            GlobalSystem:StopFunction("SpeedSystem")
+            -- Restaurar velocidade padrão
+            pcall(function()
+                if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                    Player.Character.Humanoid.WalkSpeed = 16
+                end
+            end)
         end
-        print("Velocidade: " .. tostring(state) .. " - SEMPRE ATIVO!")
+        print("Velocidade: " .. tostring(state))
     end
 })
 
@@ -577,37 +609,46 @@ Tabs.Extra:Slider({
     },
     Callback = function(value)
         SpeedSettings.CurrentSpeed = value
-        print("Velocidade definida para: " .. value .. " - SEMPRE ATIVO!")
+        if SpeedSettings.Enabled then
+            pcall(function()
+                if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                    Player.Character.Humanoid.WalkSpeed = value
+                end
+            end)
+        end
+        print("Velocidade definida para: " .. value)
     end
 })
 
 -- Toggle ESP Name
 Tabs.ESP:Toggle({
     Title = "ESP Name",
-    Value = false,
+    Value = GlobalSystem:GetToggle("ESPNameToggle"),
     Callback = function(state)
         ESPSettings.NameEnabled = state
+        GlobalSystem:UpdateToggle("ESPNameToggle", state)
         if state then
             GlobalSystem:StartFunction("ESPNameSystem")
         else
             GlobalSystem:StopFunction("ESPNameSystem")
         end
-        print("ESP Name: " .. tostring(state) .. " - SEMPRE ATIVO!")
+        print("ESP Name: " .. tostring(state))
     end
 })
 
 -- Toggle ESP Health
 Tabs.ESP:Toggle({
     Title = "ESP Health",
-    Value = false,
+    Value = GlobalSystem:GetToggle("ESPHealthToggle"),
     Callback = function(state)
         ESPSettings.HealthEnabled = state
+        GlobalSystem:UpdateToggle("ESPHealthToggle", state)
         if state then
             GlobalSystem:StartFunction("ESPHealthSystem")
         else
             GlobalSystem:StopFunction("ESPHealthSystem")
         end
-        print("ESP Health: " .. tostring(state) .. " - SEMPRE ATIVO!")
+        print("ESP Health: " .. tostring(state))
     end
 })
 
@@ -668,9 +709,10 @@ Tabs.Mingle:Toggle({
 
 Tabs.Mingle:Toggle({
     Title = "Atravessar Paredes (NoClip)",
-    Value = false,
+    Value = GlobalSystem:GetToggle("NoClipToggle"),
     Callback = function(state)
         NoClipSettings.Enabled = state
+        GlobalSystem:UpdateToggle("NoClipToggle", state)
         if state then
             GlobalSystem:StartFunction("NoClipSystem")
         else
@@ -686,15 +728,9 @@ Tabs.Mingle:Toggle({
                 end
             end)
         end
-        print("NoClip: " .. tostring(state) .. " - SEMPRE ATIVO!")
+        print("NoClip: " .. tostring(state))
     end
 })
-
--- Inicializar sistemas essenciais
-GlobalSystem:StartFunction("SpeedSystem")
-GlobalSystem:StartFunction("ESPNameSystem")
-GlobalSystem:StartFunction("ESPHealthSystem")
-GlobalSystem:StartFunction("NoClipSystem")
 
 -- Seleciona a primeira aba
 Window:SelectTab(1)
@@ -706,5 +742,4 @@ Window:OnClose(function()
     print("Todos os sistemas foram limpos.")
 end)
 
-print("ZangMods Hub carregado com sistemas SEMPRE ATIVOS!")
-print("As funções continuarão funcionando mesmo com a UI minimizada!")
+print("ZangMods Hub carregado com sucesso!")
