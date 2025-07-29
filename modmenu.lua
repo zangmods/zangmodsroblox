@@ -111,36 +111,56 @@ Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
 Tabs.Extra = SectionExtra:Tab({ Title = "Funções Extra", Icon = "wand" })
 Tabs.ESP = SectionExtra:Tab({ Title = "ESP", Icon = "eye" })
 
--- Funções da aba Extra (SEM DUPLICAÇÃO)
+-- Funções da aba Extra (SISTEMA DE SPEED CORRIGIDO)
 local SpeedEnabled = false
 local CurrentSpeed = 16
 local Player = game.Players.LocalPlayer
-local Humanoid = nil
+local RunService = game:GetService("RunService")
+local SpeedConnection = nil
 
-local function updateHumanoid()
-    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        Humanoid = Player.Character.Humanoid
+-- Função para monitorar e manter a velocidade
+local function maintainSpeed()
+    if SpeedConnection then
+        SpeedConnection:Disconnect()
+        SpeedConnection = nil
     end
-end
-
-local function setSpeed(speed)
-    updateHumanoid()
-    if Humanoid then
-        Humanoid.WalkSpeed = speed
-    end
-end
-
--- Atualiza referência do Humanoid quando o personagem spawna
-Player.CharacterAdded:Connect(function()
-    updateHumanoid()
+    
     if SpeedEnabled then
-        wait(1) -- Aguarda carregamento
-        setSpeed(CurrentSpeed)
+        SpeedConnection = RunService.Heartbeat:Connect(function()
+            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                local humanoid = Player.Character.Humanoid
+                if humanoid.WalkSpeed ~= CurrentSpeed then
+                    humanoid.WalkSpeed = CurrentSpeed
+                end
+            end
+        end)
     end
+end
+
+-- Função para configurar speed quando personagem spawna
+local function setupSpeedOnCharacter()
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        local humanoid = Player.Character.Humanoid
+        
+        if SpeedEnabled then
+            humanoid.WalkSpeed = CurrentSpeed
+            maintainSpeed() -- Reativa o monitoramento
+        else
+            humanoid.WalkSpeed = 16 -- Velocidade padrão
+        end
+    end
+end
+
+-- Conecta quando personagem spawna
+Player.CharacterAdded:Connect(function()
+    wait(1) -- Aguarda carregamento completo
+    setupSpeedOnCharacter()
 end)
 
--- Inicializa Humanoid
-updateHumanoid()
+-- Inicializa se já há personagem
+if Player.Character then
+    setupSpeedOnCharacter()
+end
 
 -- Toggle para ativar/desativar alteração de velocidade
 Tabs.Extra:Toggle({
@@ -148,11 +168,23 @@ Tabs.Extra:Toggle({
     Value = false,
     Callback = function(state)
         SpeedEnabled = state
+        
         if state then
-            setSpeed(CurrentSpeed)
+            -- Ativa speed
+            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                Player.Character.Humanoid.WalkSpeed = CurrentSpeed
+            end
+            maintainSpeed() -- Inicia monitoramento
             print("Velocidade ativada: " .. CurrentSpeed)
         else
-            setSpeed(16) -- Velocidade padrão do Roblox
+            -- Desativa speed
+            if SpeedConnection then
+                SpeedConnection:Disconnect()
+                SpeedConnection = nil
+            end
+            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                Player.Character.Humanoid.WalkSpeed = 16 -- Velocidade padrão do Roblox
+            end
             print("Velocidade desativada (padrão: 16)")
         end
     end
@@ -168,9 +200,12 @@ Tabs.Extra:Slider({
     },
     Callback = function(value)
         CurrentSpeed = value
-        if SpeedEnabled then
-            setSpeed(CurrentSpeed)
+        
+        -- Se speed estiver ativado, aplica imediatamente
+        if SpeedEnabled and Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            Player.Character.Humanoid.WalkSpeed = CurrentSpeed
         end
+        
         print("Velocidade definida para: " .. value)
     end
 })
@@ -492,7 +527,6 @@ end
 -- Aba Mingle com função especial de atravessar paredes
 local NoClipEnabled = false
 local Character = Player.Character or Player.CharacterAdded:Wait()
-local RunService = game:GetService("RunService")
 local NoClipConnection
 
 local function toggleNoClip(enabled)
@@ -556,4 +590,9 @@ Window:OnClose(function()
     -- Limpa ESP ao fechar
     toggleESPName(false)
     toggleESPHealth(false)
+    -- Limpa conexão de speed
+    if SpeedConnection then
+        SpeedConnection:Disconnect()
+        SpeedConnection = nil
+    end
 end)
