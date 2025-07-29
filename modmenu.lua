@@ -23,10 +23,10 @@ function gradient(text, startColor, endColor)
 end
 
 local Window = WindUI:CreateWindow({
-    Title = "WindUI Library",
+    Title = "ZangMods Hub",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
-    Author = "Example UI",
+    Author = "Ink Game Beta",
     Folder = "CloudHub",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -40,18 +40,6 @@ local Window = WindUI:CreateWindow({
     -- HideSearchBar = true, -- hides searchbar
     ScrollBarEnabled = true, -- enables scrollbar
     -- Background = "rbxassetid://13511292247", -- rbxassetid only
-
-    -- remove it below if you don't want to use the key system in your script.
-    KeySystem = { -- <- keysystem enabled
-        Key = { "1234", "5678" },
-        Note = "Example Key System. \n\nThe Key is '1234' or '5678",
-        -- Thumbnail = {
-        --     Image = "rbxassetid://18220445082", -- rbxassetid only
-        --     Title = "Thumbnail"
-        -- },
-        URL = "link-to-linkvertise-or-discord-or-idk", -- remove this if the key is not obtained from the link.
-        SaveKey = true, -- saves key : optional
-    },
 })
 
 
@@ -71,7 +59,7 @@ local Window = WindUI:CreateWindow({
 -- Botões customizados removidos - mantendo apenas os padrão (minimizar, expandir, fechar)
 
 Window:EditOpenButton({
-    Title = "Open Example UI",
+    Title = "Open ZangMods Hub",
     Icon = "monitor",
     CornerRadius = UDim.new(0,16),
     StrokeThickness = 2,
