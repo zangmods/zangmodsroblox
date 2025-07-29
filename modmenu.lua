@@ -99,14 +99,14 @@ Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
 Tabs.Extra = SectionExtra:Tab({ Title = "Funções Extra", Icon = "wand" })
 Tabs.ESP = SectionExtra:Tab({ Title = "ESP", Icon = "eye" })
 
--- Funções da aba Extra (SISTEMA DE SPEED CORRIGIDO)
+-- Funções da aba Extra (SISTEMA DE SPEED CORRIGIDO - SEMPRE ATIVO)
 local SpeedEnabled = false
 local CurrentSpeed = 16
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local SpeedConnection = nil
 
--- Função para monitorar e manter a velocidade
+-- Função para monitorar e manter a velocidade (SEMPRE ATIVA)
 local function maintainSpeed()
     if SpeedConnection then
         SpeedConnection:Disconnect()
@@ -115,31 +115,37 @@ local function maintainSpeed()
     
     if SpeedEnabled then
         SpeedConnection = RunService.Heartbeat:Connect(function()
-            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-                local humanoid = Player.Character.Humanoid
-                if humanoid.WalkSpeed ~= CurrentSpeed then
-                    humanoid.WalkSpeed = CurrentSpeed
+            pcall(function() -- Protege contra erros
+                if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                    local humanoid = Player.Character.Humanoid
+                    if humanoid.WalkSpeed ~= CurrentSpeed then
+                        humanoid.WalkSpeed = CurrentSpeed
+                    end
                 end
-            end
+            end)
         end)
+        print("Speed monitoramento ativado e funcionando!")
     end
 end
 
--- Função para configurar speed quando personagem spawna
+-- Função para configurar speed quando personagem spawna (SEMPRE ATIVA)
 local function setupSpeedOnCharacter()
-    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        local humanoid = Player.Character.Humanoid
-        
-        if SpeedEnabled then
-            humanoid.WalkSpeed = CurrentSpeed
-            maintainSpeed() -- Reativa o monitoramento
-        else
-            humanoid.WalkSpeed = 16 -- Velocidade padrão
+    pcall(function()
+        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            local humanoid = Player.Character.Humanoid
+            
+            if SpeedEnabled then
+                humanoid.WalkSpeed = CurrentSpeed
+                maintainSpeed() -- Reativa o monitoramento
+                print("Speed reaplicado no respawn: " .. CurrentSpeed)
+            else
+                humanoid.WalkSpeed = 16 -- Velocidade padrão
+            end
         end
-    end
+    end)
 end
 
--- Conecta quando personagem spawna
+-- Conecta quando personagem spawna (SEMPRE ATIVO)
 Player.CharacterAdded:Connect(function()
     wait(1) -- Aguarda carregamento completo
     setupSpeedOnCharacter()
@@ -150,7 +156,7 @@ if Player.Character then
     setupSpeedOnCharacter()
 end
 
--- Toggle para ativar/desativar alteração de velocidade
+-- Toggle para ativar/desativar alteração de velocidade (SEMPRE ATIVO)
 Tabs.Extra:Toggle({
     Title = "Alterar Velocidade",
     Value = false,
@@ -159,26 +165,30 @@ Tabs.Extra:Toggle({
         
         if state then
             -- Ativa speed
-            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-                Player.Character.Humanoid.WalkSpeed = CurrentSpeed
-            end
+            pcall(function()
+                if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                    Player.Character.Humanoid.WalkSpeed = CurrentSpeed
+                end
+            end)
             maintainSpeed() -- Inicia monitoramento
-            print("Velocidade ativada: " .. CurrentSpeed)
+            print("Velocidade ativada: " .. CurrentSpeed .. " - SEMPRE ATIVO!")
         else
             -- Desativa speed
             if SpeedConnection then
                 SpeedConnection:Disconnect()
                 SpeedConnection = nil
             end
-            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-                Player.Character.Humanoid.WalkSpeed = 16 -- Velocidade padrão do Roblox
-            end
+            pcall(function()
+                if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                    Player.Character.Humanoid.WalkSpeed = 16 -- Velocidade padrão do Roblox
+                end
+            end)
             print("Velocidade desativada (padrão: 16)")
         end
     end
 })
 
--- Slider para escolher a velocidade
+-- Slider para escolher a velocidade (SEMPRE ATIVO)
 Tabs.Extra:Slider({
     Title = "Velocidade do Personagem",
     Value = {
@@ -190,8 +200,12 @@ Tabs.Extra:Slider({
         CurrentSpeed = value
         
         -- Se speed estiver ativado, aplica imediatamente
-        if SpeedEnabled and Player.Character and Player.Character:FindFirstChild("Humanoid") then
-            Player.Character.Humanoid.WalkSpeed = CurrentSpeed
+        if SpeedEnabled then
+            pcall(function()
+                if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                    Player.Character.Humanoid.WalkSpeed = CurrentSpeed
+                end
+            end)
         end
         
         print("Velocidade definida para: " .. value)
@@ -377,27 +391,32 @@ local function removeESPHealth(player)
     end
 end
 
--- Função para ativar/desativar ESP Name para todos os jogadores
+-- Função para ativar/desativar ESP Name para todos os jogadores (SEMPRE ATIVO)
 local function toggleESPName(enabled)
     ESPNameEnabled = enabled
     
     if enabled then
         -- Adiciona ESP Name para todos os jogadores atuais
         for _, player in pairs(game.Players:GetPlayers()) do
-            createESPName(player)
+            pcall(function() createESPName(player) end)
         end
         
         -- Conecta evento para novos jogadores
         if not ESPConnections.PlayerAddedName then
-            ESPConnections.PlayerAddedName = game.Players.PlayerAdded:Connect(createESPName)
+            ESPConnections.PlayerAddedName = game.Players.PlayerAdded:Connect(function(player)
+                pcall(function() createESPName(player) end)
+            end)
         end
         if not ESPConnections.PlayerRemovingName then
-            ESPConnections.PlayerRemovingName = game.Players.PlayerRemoving:Connect(removeESPName)
+            ESPConnections.PlayerRemovingName = game.Players.PlayerRemoving:Connect(function(player)
+                pcall(function() removeESPName(player) end)
+            end)
         end
+        print("ESP Name ativado - SEMPRE ATIVO!")
     else
         -- Remove ESP Name de todos os jogadores
         for _, player in pairs(game.Players:GetPlayers()) do
-            removeESPName(player)
+            pcall(function() removeESPName(player) end)
         end
         
         -- Desconecta eventos
@@ -409,30 +428,36 @@ local function toggleESPName(enabled)
             ESPConnections.PlayerRemovingName:Disconnect()
             ESPConnections.PlayerRemovingName = nil
         end
+        print("ESP Name desativado")
     end
 end
 
--- Função para ativar/desativar ESP Health para todos os jogadores
+-- Função para ativar/desativar ESP Health para todos os jogadores (SEMPRE ATIVO)
 local function toggleESPHealth(enabled)
     ESPHealthEnabled = enabled
     
     if enabled then
         -- Adiciona ESP Health para todos os jogadores atuais
         for _, player in pairs(game.Players:GetPlayers()) do
-            createESPHealth(player)
+            pcall(function() createESPHealth(player) end)
         end
         
         -- Conecta evento para novos jogadores
         if not ESPConnections.PlayerAddedHealth then
-            ESPConnections.PlayerAddedHealth = game.Players.PlayerAdded:Connect(createESPHealth)
+            ESPConnections.PlayerAddedHealth = game.Players.PlayerAdded:Connect(function(player)
+                pcall(function() createESPHealth(player) end)
+            end)
         end
         if not ESPConnections.PlayerRemovingHealth then
-            ESPConnections.PlayerRemovingHealth = game.Players.PlayerRemoving:Connect(removeESPHealth)
+            ESPConnections.PlayerRemovingHealth = game.Players.PlayerRemoving:Connect(function(player)
+                pcall(function() removeESPHealth(player) end)
+            end)
         end
+        print("ESP Health ativado - SEMPRE ATIVO!")
     else
         -- Remove ESP Health de todos os jogadores
         for _, player in pairs(game.Players:GetPlayers()) do
-            removeESPHealth(player)
+            pcall(function() removeESPHealth(player) end)
         end
         
         -- Desconecta eventos
@@ -444,26 +469,27 @@ local function toggleESPHealth(enabled)
             ESPConnections.PlayerRemovingHealth:Disconnect()
             ESPConnections.PlayerRemovingHealth = nil
         end
+        print("ESP Health desativado")
     end
 end
 
--- Toggle ESP Name na aba ESP
+-- Toggle ESP Name na aba ESP (SEMPRE ATIVO)
 Tabs.ESP:Toggle({
     Title = "ESP Name",
     Value = false,
     Callback = function(state)
         toggleESPName(state)
-        print("ESP Name: " .. tostring(state))
+        print("ESP Name: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
 
--- Toggle ESP Health na aba ESP
+-- Toggle ESP Health na aba ESP (SEMPRE ATIVO)
 Tabs.ESP:Toggle({
     Title = "ESP Health",
     Value = false,
     Callback = function(state)
         toggleESPHealth(state)
-        print("ESP Health: " .. tostring(state))
+        print("ESP Health: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
 
@@ -512,7 +538,7 @@ for name, tab in pairs(Tabs) do
     end
 end
 
--- Aba Mingle com função especial de atravessar paredes
+-- Aba Mingle com função especial de atravessar paredes (SEMPRE ATIVO)
 local NoClipEnabled = false
 local Character = Player.Character or Player.CharacterAdded:Wait()
 local NoClipConnection
@@ -520,25 +546,31 @@ local NoClipConnection
 local function toggleNoClip(enabled)
     if enabled then
         NoClipConnection = RunService.Stepped:Connect(function()
-            if Player.Character then
-                for _, part in pairs(Player.Character:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
+            pcall(function() -- Protege contra erros
+                if Player.Character then
+                    for _, part in pairs(Player.Character:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
                     end
                 end
-            end
+            end)
         end)
+        print("NoClip ativado - SEMPRE ATIVO!")
     else
         if NoClipConnection then
             NoClipConnection:Disconnect()
         end
-        if Player.Character then
-            for _, part in pairs(Player.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
+        pcall(function()
+            if Player.Character then
+                for _, part in pairs(Player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
                 end
             end
-        end
+        end)
+        print("NoClip desativado")
     end
 end
 
@@ -556,16 +588,17 @@ Tabs.Mingle:Toggle({
     Callback = function(state)
         NoClipEnabled = state
         toggleNoClip(state)
-        print("NoClip: " .. tostring(state))
+        print("NoClip: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
 
--- Reconectar NoClip quando o personagem respawnar
+-- Reconectar NoClip quando o personagem respawnar (SEMPRE ATIVO)
 Player.CharacterAdded:Connect(function(newCharacter)
     Character = newCharacter
     if NoClipEnabled then
         wait(1) -- Aguarda um pouco para o personagem carregar completamente
         toggleNoClip(true)
+        print("NoClip reaplicado no respawn!")
     end
 end)
 
