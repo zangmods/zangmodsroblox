@@ -584,15 +584,20 @@ end)
 -- Seleciona a primeira aba
 Window:SelectTab(1)
 
--- function :OnClose()
+-- function :OnClose() - APENAS quando fechar completamente a UI
 Window:OnClose(function()
-    print("UI closed.")
-    -- Limpa ESP ao fechar
+    print("UI closed completely.")
+    -- Limpa ESP ao fechar COMPLETAMENTE
     toggleESPName(false)
     toggleESPHealth(false)
     -- Limpa conexão de speed
     if SpeedConnection then
         SpeedConnection:Disconnect()
         SpeedConnection = nil
+    end
+    -- Desativa NoClip
+    if NoClipConnection then
+        NoClipConnection:Disconnect()
+        NoClipConnection = nil
     end
 end)
