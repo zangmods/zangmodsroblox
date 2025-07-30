@@ -15,7 +15,7 @@ function gradient(text, startColor, endColor)
 end
 
 local Window = WindUI:CreateWindow({
-    Title = "ZangMods Hub",
+    Title = "ZangModffs Hub",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
     Author = "Ink Game alfa",
@@ -85,40 +85,52 @@ end
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- ===== SISTEMA DE VELOCIDADE OTIMIZADO =====
+-- ===== SISTEMA DE VELOCIDADE + NOCLIP SEMPRE ATIVOS =====
 local SpeedSettings = { Enabled = false, CurrentSpeed = 16 }
+local NoClipSettings = { Enabled = false }
+
 local function SetWalkSpeed(speed)
     local char = Player.Character
     local hum = char and char:FindFirstChild("Humanoid")
     if hum then hum.WalkSpeed = speed end
 end
 
-local function CreateSpeedSystem()
+local function SetNoClipEnabled(enabled)
+    local char = Player.Character
+    if char then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = not enabled end
+        end
+    end
+end
+
+local function CreateGlobalHeartbeatSystem()
     local connections = {}
     connections.heartbeat = RunService.Heartbeat:Connect(function()
+        -- Speed Hack
         local char = Player.Character
         local hum = char and char:FindFirstChild("Humanoid")
         if hum then
             local wantedSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
             if hum.WalkSpeed ~= wantedSpeed then hum.WalkSpeed = wantedSpeed end
         end
+        -- NoClip
+        if NoClipSettings.Enabled then
+            SetNoClipEnabled(true)
+        end
     end)
     connections.charConn = Player.CharacterAdded:Connect(function(char)
         char:WaitForChild("Humanoid", 5)
         RunService.Heartbeat:Wait()
         SetWalkSpeed(SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16)
-        if connections.humanoidSignal then connections.humanoidSignal:Disconnect() end
-        local hum = char:FindFirstChild("Humanoid")
-        if hum then
-            connections.humanoidSignal = hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-                local wantedSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
-                if hum.WalkSpeed ~= wantedSpeed then hum.WalkSpeed = wantedSpeed end
-            end)
-        end
+        SetNoClipEnabled(NoClipSettings.Enabled)
+        char.DescendantAdded:Connect(function(desc)
+            if NoClipSettings.Enabled and desc:IsA("BasePart") then desc.CanCollide = false end
+        end)
     end)
     return connections
 end
-GlobalSystem:RegisterFunction("SpeedSystem", CreateSpeedSystem, true)
+GlobalSystem:RegisterFunction("GlobalHeartbeatSystem", CreateGlobalHeartbeatSystem, true)
 
 -- ===== SISTEMA ESP =====
 local ESPSettings = { NameEnabled = false, HealthEnabled = false }
@@ -237,38 +249,6 @@ local function ESPUpdater()
     return connections
 end
 GlobalSystem:RegisterFunction("ESPSystem", ESPUpdater, true)
-
--- ===== NOCLIP OTIMIZADO =====
-local NoClipSettings = { Enabled = false }
-local function SetNoClipEnabled(enabled)
-    local char = Player.Character
-    if char then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = not enabled end
-        end
-    end
-end
-
-local function CreateNoClipSystem()
-    local connections = {}
-    connections.stepped = RunService.Stepped:Connect(function()
-        if NoClipSettings.Enabled then SetNoClipEnabled(true) end
-    end)
-    connections.charConn = Player.CharacterAdded:Connect(function(char)
-        RunService.Heartbeat:Wait()
-        SetNoClipEnabled(NoClipSettings.Enabled)
-        char.DescendantAdded:Connect(function(desc)
-            if NoClipSettings.Enabled and desc:IsA("BasePart") then desc.CanCollide = false end
-        end)
-    end)
-    if Player.Character then
-        Player.Character.DescendantAdded:Connect(function(desc)
-            if NoClipSettings.Enabled and desc:IsA("BasePart") then desc.CanCollide = false end
-        end)
-    end
-    return connections
-end
-GlobalSystem:RegisterFunction("NoClipSystem", CreateNoClipSystem, true)
 
 -- ===== INTERFACE =====
 local Tabs = {}
@@ -399,4 +379,4 @@ end)
 
 print("ZangMods Hub carregado com sistemas SEMPRE ATIVOS!")
 print("As funções continuam funcionando mesmo minimizando a UI!")
-print("CORREÇÃO FINAL: ESP, Speed, NoClip SEMPRE ATIVOS e funcionando!")
+print("CORREÇÃO FINAL: Speed/NoClip/ESP SEMPRE ATIVOS, UI desacoplada!")
