@@ -21,7 +21,7 @@ local Window = WindUI:CreateWindow({
     Title = "ZangMods Hub",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
-    Author = "Ink Game alf bug fixa",
+    Author = "Ink Game alfa",
     Folder = "CloudHub",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -103,31 +103,42 @@ end
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- ===== SISTEMA DE VELOCIDADE =====
+-- ===== SISTEMA DE VELOCIDADE CORRIGIDO =====
 local SpeedSettings = {
     Enabled = false,
     CurrentSpeed = 16,
 }
 
+local function SetWalkSpeed(speed)
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        local humanoid = Player.Character.Humanoid
+        humanoid.WalkSpeed = speed
+    end
+end
+
 local function CreateSpeedSystem()
     local connections = {}
+    -- Corrige para aplicar sempre que SpeedSettings muda, e no respawn
     connections.heartbeat = RunService.Heartbeat:Connect(function()
-        pcall(function()
-            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-                local humanoid = Player.Character.Humanoid
-                -- Só altera se diferente (evita bug em jogos que resetam WalkSpeed)
-                if humanoid.WalkSpeed ~= (SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16) then
-                    humanoid.WalkSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
-                end
-            end
-        end)
-    end)
-    connections.characterAdded = Player.CharacterAdded:Connect(function()
-        wait(1)
         if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-            Player.Character.Humanoid.WalkSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
+            if SpeedSettings.Enabled then
+                SetWalkSpeed(SpeedSettings.CurrentSpeed)
+            else
+                SetWalkSpeed(16)
+            end
         end
     end)
+    connections.characterAdded = Player.CharacterAdded:Connect(function(char)
+        char:WaitForChild("Humanoid", 5)
+        RunService.Heartbeat:Wait()
+        if SpeedSettings.Enabled then
+            SetWalkSpeed(SpeedSettings.CurrentSpeed)
+        else
+            SetWalkSpeed(16)
+        end
+    end)
+    -- Garantir que o valor seja aplicado instantaneamente na interface
+    connections.speedChanged = nil
     return connections
 end
 GlobalSystem:RegisterFunction("SpeedSystem", CreateSpeedSystem, true)
@@ -290,23 +301,32 @@ local function ESPUpdater()
 end
 GlobalSystem:RegisterFunction("ESPSystem", ESPUpdater, true)
 
--- ===== SISTEMA NOCLIP =====
+-- ===== SISTEMA NOCLIP CORRIGIDO =====
 local NoClipSettings = { Enabled = false }
+local function SetNoClipEnabled(enabled)
+    if Player.Character then
+        for _, part in pairs(Player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = not enabled
+            end
+        end
+    end
+end
+
 local function CreateNoClipSystem()
     local connections = {}
     connections.stepped = RunService.Stepped:Connect(function()
-        if NoClipSettings.Enabled and Player.Character then
-            for _, part in pairs(Player.Character:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
-            end
+        if NoClipSettings.Enabled then
+            SetNoClipEnabled(true)
         end
     end)
-    connections.characterAdded = Player.CharacterAdded:Connect(function()
-        wait(1)
-        if NoClipSettings.Enabled and Player.Character then
-            for _, part in pairs(Player.Character:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
-            end
+    connections.characterAdded = Player.CharacterAdded:Connect(function(char)
+        char:WaitForChild("Humanoid", 5)
+        RunService.Heartbeat:Wait()
+        if NoClipSettings.Enabled then
+            SetNoClipEnabled(true)
+        else
+            SetNoClipEnabled(false)
         end
     end)
     return connections
@@ -328,12 +348,14 @@ Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
 Tabs.Extra = SectionExtra:Tab({ Title = "Funções Extra", Icon = "wand" })
 Tabs.ESP = SectionExtra:Tab({ Title = "ESP", Icon = "eye" })
 
--- CONTROLES DA INTERFACE
 Tabs.Extra:Toggle({
     Title = "Alterar Velocidade",
     Value = false,
     Callback = function(state)
         SpeedSettings.Enabled = state
+        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            Player.Character.Humanoid.WalkSpeed = state and SpeedSettings.CurrentSpeed or 16
+        end
         print("Velocidade: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
@@ -342,6 +364,9 @@ Tabs.Extra:Slider({
     Value = { Min = 1, Max = 100, Default = 16 },
     Callback = function(value)
         SpeedSettings.CurrentSpeed = value
+        if SpeedSettings.Enabled and Player.Character and Player.Character:FindFirstChild("Humanoid") then
+            Player.Character.Humanoid.WalkSpeed = value
+        end
         print("Velocidade definida para: " .. value .. " - SEMPRE ATIVO!")
     end
 })
@@ -426,12 +451,8 @@ Tabs.Mingle:Toggle({
     Value = false,
     Callback = function(state)
         NoClipSettings.Enabled = state
+        SetNoClipEnabled(state)
         print("NoClip: " .. tostring(state) .. " - SEMPRE ATIVO!")
-        if not state and Player.Character then
-            for _, part in pairs(Player.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = true end
-            end
-        end
     end
 })
 
@@ -444,4 +465,4 @@ end)
 
 print("ZangMods Hub carregado com sistemas SEMPRE ATIVOS!")
 print("As funções continuam funcionando mesmo minimizando a UI!")
-print("CORREÇÃO FINAL: ESP e NoClip SEMPRE ATIVOS, desacoplados da interface!")
+print("CORREÇÃO FINAL: ESP, Speed, NoClip SEMPRE ATIVOS e funcionando!")
