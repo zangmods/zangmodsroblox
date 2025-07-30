@@ -3,22 +3,19 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 function gradient(text, startColor, endColor)
     local result = ""
     local length = #text
-
     for i = 1, length do
         local t = (i - 1) / math.max(length - 1, 1)
         local r = math.floor((startColor.R + (endColor.R - startColor.R) * t) * 255)
         local g = math.floor((startColor.G + (endColor.G - startColor.G) * t) * 255)
         local b = math.floor((startColor.B + (endColor.B - startColor.B) * t) * 255)
-
         local char = text:sub(i, i)
         result = result .. "<font color=\"rgb(" .. r ..", " .. g .. ", " .. b .. ")\">" .. char .. "</font>"
     end
-
     return result
 end
 
 local Window = WindUI:CreateWindow({
-    Title = "ZangMods fizHub",
+    Title = "ZangMods Hub",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
     Author = "Ink Game alfa",
@@ -47,22 +44,11 @@ Window:EditOpenButton({
     Draggable = true,
 })
 
--- ===== SISTEMA GLOBAL DE FUNÇÕES (SEMPRE ATIVO) =====
-local GlobalSystem = {
-    Functions = {},
-}
-
+local GlobalSystem = { Functions = {} }
 function GlobalSystem:RegisterFunction(name, func, autoStart)
-    self.Functions[name] = {
-        func = func,
-        active = false,
-        connection = nil
-    }
-    if autoStart then
-        self:StartFunction(name)
-    end
+    self.Functions[name] = { func = func, active = false, connection = nil }
+    if autoStart then self:StartFunction(name) end
 end
-
 function GlobalSystem:StartFunction(name)
     local fn = self.Functions[name]
     if fn and not fn.active then
@@ -71,7 +57,6 @@ function GlobalSystem:StartFunction(name)
         print("Função " .. name .. " iniciada (SEMPRE ATIVO)")
     end
 end
-
 function GlobalSystem:StopFunction(name)
     local fn = self.Functions[name]
     if fn and fn.active then
@@ -91,11 +76,8 @@ function GlobalSystem:StopFunction(name)
         print("Função " .. name .. " parada")
     end
 end
-
 function GlobalSystem:ClearAll()
-    for name in pairs(self.Functions) do
-        self:StopFunction(name)
-    end
+    for name in pairs(self.Functions) do self:StopFunction(name) end
     self.Functions = {}
     print("Sistema Global limpo completamente")
 end
@@ -103,84 +85,49 @@ end
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- ===== SISTEMA DE VELOCIDADE CORRIGIDO =====
-local SpeedSettings = {
-    Enabled = false,
-    CurrentSpeed = 16,
-}
+-- ===== SISTEMA DE VELOCIDADE OTIMIZADO =====
+local SpeedSettings = { Enabled = false, CurrentSpeed = 16 }
 local function SetWalkSpeed(speed)
-    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        local humanoid = Player.Character.Humanoid
-        humanoid.WalkSpeed = speed
-    end
+    local char = Player.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hum then hum.WalkSpeed = speed end
 end
 
 local function CreateSpeedSystem()
     local connections = {}
     connections.heartbeat = RunService.Heartbeat:Connect(function()
-        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-            if SpeedSettings.Enabled then
-                SetWalkSpeed(SpeedSettings.CurrentSpeed)
-            else
-                SetWalkSpeed(16)
-            end
+        local char = Player.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        if hum then
+            local wantedSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
+            if hum.WalkSpeed ~= wantedSpeed then hum.WalkSpeed = wantedSpeed end
         end
     end)
-    connections.characterAdded = Player.CharacterAdded:Connect(function(char)
+    connections.charConn = Player.CharacterAdded:Connect(function(char)
         char:WaitForChild("Humanoid", 5)
         RunService.Heartbeat:Wait()
-        if SpeedSettings.Enabled then
-            SetWalkSpeed(SpeedSettings.CurrentSpeed)
-        else
-            SetWalkSpeed(16)
-        end
-    end)
-    -- Adicionado monitor para garantir funcionamento mesmo se algum script do jogo tentar resetar
-    connections.humanoidChanged = nil
-    local function setupHumanoidMonitor(char)
+        SetWalkSpeed(SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16)
+        if connections.humanoidSignal then connections.humanoidSignal:Disconnect() end
         local hum = char:FindFirstChild("Humanoid")
         if hum then
-            if connections.humanoidChanged then
-                connections.humanoidChanged:Disconnect()
-            end
-            connections.humanoidChanged = hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-                if SpeedSettings.Enabled then
-                    -- Força o valor definido, se o jogo tentar mudar
-                    if hum.WalkSpeed ~= SpeedSettings.CurrentSpeed then
-                        hum.WalkSpeed = SpeedSettings.CurrentSpeed
-                    end
-                else
-                    if hum.WalkSpeed ~= 16 then
-                        hum.WalkSpeed = 16
-                    end
-                end
+            connections.humanoidSignal = hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                local wantedSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
+                if hum.WalkSpeed ~= wantedSpeed then hum.WalkSpeed = wantedSpeed end
             end)
         end
-    end
-    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        setupHumanoidMonitor(Player.Character)
-    end
-    Player.CharacterAdded:Connect(function(char)
-        char:WaitForChild("Humanoid", 5)
-        setupHumanoidMonitor(char)
     end)
     return connections
 end
 GlobalSystem:RegisterFunction("SpeedSystem", CreateSpeedSystem, true)
 
 -- ===== SISTEMA ESP =====
-local ESPSettings = {
-    NameEnabled = false,
-    HealthEnabled = false,
-}
-local ESPObjects, ESPConnections, HealthConnections = {}, {}, {}
+local ESPSettings = { NameEnabled = false, HealthEnabled = false }
+local ESPObjects, HealthConnections = {}, {}
 
 local function createESPName(player)
     if player == Player then return end
     if player.Character and player.Character:FindFirstChild("Head") then
-        if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
-            ESPObjects[player.Name].Name:Destroy()
-        end
+        if ESPObjects[player.Name] and ESPObjects[player.Name].Name then ESPObjects[player.Name].Name:Destroy() end
         local head = player.Character.Head
         local billboard = Instance.new("BillboardGui")
         local nameLabel = Instance.new("TextLabel")
@@ -193,36 +140,25 @@ local function createESPName(player)
         nameLabel.Size = UDim2.new(1, 0, 1, 0)
         nameLabel.BackgroundTransparency = 1
         nameLabel.Text = player.Name
-        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
         nameLabel.TextScaled = true
         nameLabel.TextStrokeTransparency = 0
-        nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        nameLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
         nameLabel.Font = Enum.Font.SourceSansBold
         ESPObjects[player.Name] = ESPObjects[player.Name] or {}
         ESPObjects[player.Name].Name = billboard
     end
 end
-local function removeESPName(player)
-    if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
-        ESPObjects[player.Name].Name:Destroy()
-        ESPObjects[player.Name].Name = nil
-    end
-end
 local function removeAllESPName()
-    for playerName, objects in pairs(ESPObjects) do
-        if objects.Name then
-            objects.Name:Destroy()
-            objects.Name = nil
-        end
+    for _, objs in pairs(ESPObjects) do
+        if objs.Name then objs.Name:Destroy(); objs.Name = nil end
     end
 end
 
 local function createESPHealth(player)
     if player == Player then return end
     if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
-        if ESPObjects[player.Name] and ESPObjects[player.Name].Health then
-            ESPObjects[player.Name].Health:Destroy()
-        end
+        if ESPObjects[player.Name] and ESPObjects[player.Name].Health then ESPObjects[player.Name].Health:Destroy() end
         local head = player.Character.Head
         local humanoid = player.Character.Humanoid
         local billboard = Instance.new("BillboardGui")
@@ -236,8 +172,8 @@ local function createESPHealth(player)
         billboard.AlwaysOnTop = true
         frame.Parent = billboard
         frame.Size = UDim2.new(1, 0, 0.7, 0)
-        frame.Position = UDim2.new(0, 0, 0, 0)
-        frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        frame.Position = UDim2.new(0,0,0,0)
+        frame.BackgroundColor3 = Color3.fromRGB(50,50,50)
         frame.BorderSizePixel = 1
         frame.BorderColor3 = Color3.fromRGB(255,255,255)
         bar.Parent = frame
@@ -254,45 +190,21 @@ local function createESPHealth(player)
         text.TextStrokeTransparency = 0
         text.TextStrokeColor3 = Color3.fromRGB(0,0,0)
         text.Font = Enum.Font.SourceSans
-        local function updateHealth()
-            if bar and text and humanoid then
-                local pct = humanoid.Health/humanoid.MaxHealth
-                bar.Size = UDim2.new(pct,0,1,0)
-                bar.BackgroundColor3 = pct>0.6 and Color3.fromRGB(0,255,0) or (pct>0.3 and Color3.fromRGB(255,255,0) or Color3.fromRGB(255,0,0))
-                text.Text = math.floor(humanoid.Health).."/"..math.floor(humanoid.MaxHealth)
-            end
-        end
-        if HealthConnections[player.Name] and HealthConnections[player.Name].HealthChanged then
-            HealthConnections[player.Name].HealthChanged:Disconnect()
-        end
-        HealthConnections[player.Name] = HealthConnections[player.Name] or {}
-        HealthConnections[player.Name].HealthChanged = humanoid.HealthChanged:Connect(updateHealth)
+        if HealthConnections[player.Name] then HealthConnections[player.Name]:Disconnect() end
+        HealthConnections[player.Name] = humanoid.HealthChanged:Connect(function()
+            local pct = humanoid.Health/humanoid.MaxHealth
+            bar.Size = UDim2.new(pct,0,1,0)
+            bar.BackgroundColor3 = pct>0.6 and Color3.fromRGB(0,255,0) or (pct>0.3 and Color3.fromRGB(255,255,0) or Color3.fromRGB(255,0,0))
+            text.Text = math.floor(humanoid.Health).."/"..math.floor(humanoid.MaxHealth)
+        end)
         ESPObjects[player.Name] = ESPObjects[player.Name] or {}
         ESPObjects[player.Name].Health = billboard
     end
 end
-local function removeESPHealth(player)
-    if ESPObjects[player.Name] and ESPObjects[player.Name].Health then
-        ESPObjects[player.Name].Health:Destroy()
-        ESPObjects[player.Name].Health = nil
-    end
-    if HealthConnections[player.Name] and HealthConnections[player.Name].HealthChanged then
-        HealthConnections[player.Name].HealthChanged:Disconnect()
-        HealthConnections[player.Name].HealthChanged = nil
-    end
-end
 local function removeAllESPHealth()
-    for playerName, objects in pairs(ESPObjects) do
-        if objects.Health then
-            objects.Health:Destroy()
-            objects.Health = nil
-        end
-    end
-    for playerName, conns in pairs(HealthConnections) do
-        if conns.HealthChanged then
-            conns.HealthChanged:Disconnect()
-            conns.HealthChanged = nil
-        end
+    for name, objs in pairs(ESPObjects) do
+        if objs.Health then objs.Health:Destroy(); objs.Health = nil end
+        if HealthConnections[name] then HealthConnections[name]:Disconnect(); HealthConnections[name] = nil end
     end
 end
 
@@ -303,8 +215,8 @@ local function ESPUpdater()
         if ESPSettings.HealthEnabled then createESPHealth(player) end
     end)
     connections.playerRemoving = game.Players.PlayerRemoving:Connect(function(player)
-        removeESPName(player)
-        removeESPHealth(player)
+        removeAllESPName()
+        removeAllESPHealth()
     end)
     connections.heartbeat = RunService.Heartbeat:Connect(function()
         for _, player in pairs(game.Players:GetPlayers()) do
@@ -326,14 +238,13 @@ local function ESPUpdater()
 end
 GlobalSystem:RegisterFunction("ESPSystem", ESPUpdater, true)
 
--- ===== SISTEMA NOCLIP CORRIGIDO =====
+-- ===== NOCLIP OTIMIZADO =====
 local NoClipSettings = { Enabled = false }
 local function SetNoClipEnabled(enabled)
-    if Player.Character then
-        for _, part in pairs(Player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = not enabled
-            end
+    local char = Player.Character
+    if char then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = not enabled end
         end
     end
 end
@@ -341,39 +252,25 @@ end
 local function CreateNoClipSystem()
     local connections = {}
     connections.stepped = RunService.Stepped:Connect(function()
-        if NoClipSettings.Enabled and Player.Character then
-            -- Força repetidamente para garantir que não volta
-            SetNoClipEnabled(true)
-        end
+        if NoClipSettings.Enabled then SetNoClipEnabled(true) end
     end)
-    connections.characterAdded = Player.CharacterAdded:Connect(function(char)
-        char:WaitForChild("Humanoid", 5)
+    connections.charConn = Player.CharacterAdded:Connect(function(char)
         RunService.Heartbeat:Wait()
-        if NoClipSettings.Enabled then
-            SetNoClipEnabled(true)
-        else
-            SetNoClipEnabled(false)
-        end
-        -- Adiciona monitor para garantir que partes novas fiquem sem colisão
+        SetNoClipEnabled(NoClipSettings.Enabled)
         char.DescendantAdded:Connect(function(desc)
-            if NoClipSettings.Enabled and desc:IsA("BasePart") then
-                desc.CanCollide = false
-            end
+            if NoClipSettings.Enabled and desc:IsA("BasePart") then desc.CanCollide = false end
         end)
     end)
-    -- Monitor para garantir que partes novas fiquem sem colisão mesmo em personagem já existente
     if Player.Character then
         Player.Character.DescendantAdded:Connect(function(desc)
-            if NoClipSettings.Enabled and desc:IsA("BasePart") then
-                desc.CanCollide = false
-            end
+            if NoClipSettings.Enabled and desc:IsA("BasePart") then desc.CanCollide = false end
         end)
     end
     return connections
 end
 GlobalSystem:RegisterFunction("NoClipSystem", CreateNoClipSystem, true)
 
--- ===== INTERFACE DO USUÁRIO =====
+-- ===== INTERFACE =====
 local Tabs = {}
 local SectionGames = Window:Section({ Title = "Jogos", Opened = true })
 local SectionExtra = Window:Section({ Title = "Funções Extras", Opened = true })
@@ -393,9 +290,7 @@ Tabs.Extra:Toggle({
     Value = false,
     Callback = function(state)
         SpeedSettings.Enabled = state
-        if Player.Character and Player.Character:FindFirstChild("Humanoid") then
-            Player.Character.Humanoid.WalkSpeed = state and SpeedSettings.CurrentSpeed or 16
-        end
+        SetWalkSpeed(state and SpeedSettings.CurrentSpeed or 16)
         print("Velocidade: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
@@ -404,9 +299,7 @@ Tabs.Extra:Slider({
     Value = { Min = 1, Max = 100, Default = 16 },
     Callback = function(value)
         SpeedSettings.CurrentSpeed = value
-        if SpeedSettings.Enabled and Player.Character and Player.Character:FindFirstChild("Humanoid") then
-            Player.Character.Humanoid.WalkSpeed = value
-        end
+        if SpeedSettings.Enabled then SetWalkSpeed(value) end
         print("Velocidade definida para: " .. value .. " - SEMPRE ATIVO!")
     end
 })
@@ -442,8 +335,9 @@ Tabs.ESP:Toggle({
 })
 
 local function teleportForward(distance)
-    if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = Player.Character.HumanoidRootPart
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then
         local pos, dir = hrp.Position, hrp.CFrame.LookVector
         local newPos = pos + (dir * distance)
         hrp.CFrame = CFrame.new(newPos, newPos + dir)
