@@ -21,7 +21,7 @@ local Window = WindUI:CreateWindow({
     Title = "ZangMods Hub",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
-    Author = "Ink Game alfa",
+    Author = "Ink Game alf bug fixa",
     Folder = "CloudHub",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -115,7 +115,10 @@ local function CreateSpeedSystem()
         pcall(function()
             if Player.Character and Player.Character:FindFirstChild("Humanoid") then
                 local humanoid = Player.Character.Humanoid
-                humanoid.WalkSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
+                -- Só altera se diferente (evita bug em jogos que resetam WalkSpeed)
+                if humanoid.WalkSpeed ~= (SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16) then
+                    humanoid.WalkSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
+                end
             end
         end)
     end)
@@ -167,6 +170,14 @@ local function removeESPName(player)
     if ESPObjects[player.Name] and ESPObjects[player.Name].Name then
         ESPObjects[player.Name].Name:Destroy()
         ESPObjects[player.Name].Name = nil
+    end
+end
+local function removeAllESPName()
+    for playerName, objects in pairs(ESPObjects) do
+        if objects.Name then
+            objects.Name:Destroy()
+            objects.Name = nil
+        end
     end
 end
 
@@ -234,6 +245,20 @@ local function removeESPHealth(player)
         HealthConnections[player.Name].HealthChanged = nil
     end
 end
+local function removeAllESPHealth()
+    for playerName, objects in pairs(ESPObjects) do
+        if objects.Health then
+            objects.Health:Destroy()
+            objects.Health = nil
+        end
+    end
+    for playerName, conns in pairs(HealthConnections) do
+        if conns.HealthChanged then
+            conns.HealthChanged:Disconnect()
+            conns.HealthChanged = nil
+        end
+    end
+end
 
 local function ESPUpdater()
     local connections = {}
@@ -252,15 +277,11 @@ local function ESPUpdater()
                     if not ESPObjects[player.Name] or not ESPObjects[player.Name].Name or not ESPObjects[player.Name].Name.Parent then
                         createESPName(player)
                     end
-                else
-                    removeESPName(player)
                 end
                 if ESPSettings.HealthEnabled then
                     if not ESPObjects[player.Name] or not ESPObjects[player.Name].Health or not ESPObjects[player.Name].Health.Parent then
                         createESPHealth(player)
                     end
-                else
-                    removeESPHealth(player)
                 end
             end
         end
@@ -276,7 +297,7 @@ local function CreateNoClipSystem()
     connections.stepped = RunService.Stepped:Connect(function()
         if NoClipSettings.Enabled and Player.Character then
             for _, part in pairs(Player.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
+                if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
             end
         end
     end)
@@ -284,7 +305,7 @@ local function CreateNoClipSystem()
         wait(1)
         if NoClipSettings.Enabled and Player.Character then
             for _, part in pairs(Player.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
+                if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
             end
         end
     end)
@@ -329,6 +350,13 @@ Tabs.ESP:Toggle({
     Value = false,
     Callback = function(state)
         ESPSettings.NameEnabled = state
+        if state then
+            for _, player in pairs(game.Players:GetPlayers()) do
+                createESPName(player)
+            end
+        else
+            removeAllESPName()
+        end
         print("ESP Name: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
@@ -337,6 +365,13 @@ Tabs.ESP:Toggle({
     Value = false,
     Callback = function(state)
         ESPSettings.HealthEnabled = state
+        if state then
+            for _, player in pairs(game.Players:GetPlayers()) do
+                createESPHealth(player)
+            end
+        else
+            removeAllESPHealth()
+        end
         print("ESP Health: " .. tostring(state) .. " - SEMPRE ATIVO!")
     end
 })
