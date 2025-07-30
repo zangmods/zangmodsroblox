@@ -18,7 +18,7 @@ function gradient(text, startColor, endColor)
 end
 
 local Window = WindUI:CreateWindow({
-    Title = "ZangMods Hub",
+    Title = "ZangMods fizHub",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
     Author = "Ink Game alfa",
@@ -108,7 +108,6 @@ local SpeedSettings = {
     Enabled = false,
     CurrentSpeed = 16,
 }
-
 local function SetWalkSpeed(speed)
     if Player.Character and Player.Character:FindFirstChild("Humanoid") then
         local humanoid = Player.Character.Humanoid
@@ -118,7 +117,6 @@ end
 
 local function CreateSpeedSystem()
     local connections = {}
-    -- Corrige para aplicar sempre que SpeedSettings muda, e no respawn
     connections.heartbeat = RunService.Heartbeat:Connect(function()
         if Player.Character and Player.Character:FindFirstChild("Humanoid") then
             if SpeedSettings.Enabled then
@@ -137,8 +135,35 @@ local function CreateSpeedSystem()
             SetWalkSpeed(16)
         end
     end)
-    -- Garantir que o valor seja aplicado instantaneamente na interface
-    connections.speedChanged = nil
+    -- Adicionado monitor para garantir funcionamento mesmo se algum script do jogo tentar resetar
+    connections.humanoidChanged = nil
+    local function setupHumanoidMonitor(char)
+        local hum = char:FindFirstChild("Humanoid")
+        if hum then
+            if connections.humanoidChanged then
+                connections.humanoidChanged:Disconnect()
+            end
+            connections.humanoidChanged = hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                if SpeedSettings.Enabled then
+                    -- Força o valor definido, se o jogo tentar mudar
+                    if hum.WalkSpeed ~= SpeedSettings.CurrentSpeed then
+                        hum.WalkSpeed = SpeedSettings.CurrentSpeed
+                    end
+                else
+                    if hum.WalkSpeed ~= 16 then
+                        hum.WalkSpeed = 16
+                    end
+                end
+            end)
+        end
+    end
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        setupHumanoidMonitor(Player.Character)
+    end
+    Player.CharacterAdded:Connect(function(char)
+        char:WaitForChild("Humanoid", 5)
+        setupHumanoidMonitor(char)
+    end)
     return connections
 end
 GlobalSystem:RegisterFunction("SpeedSystem", CreateSpeedSystem, true)
@@ -316,7 +341,8 @@ end
 local function CreateNoClipSystem()
     local connections = {}
     connections.stepped = RunService.Stepped:Connect(function()
-        if NoClipSettings.Enabled then
+        if NoClipSettings.Enabled and Player.Character then
+            -- Força repetidamente para garantir que não volta
             SetNoClipEnabled(true)
         end
     end)
@@ -328,7 +354,21 @@ local function CreateNoClipSystem()
         else
             SetNoClipEnabled(false)
         end
+        -- Adiciona monitor para garantir que partes novas fiquem sem colisão
+        char.DescendantAdded:Connect(function(desc)
+            if NoClipSettings.Enabled and desc:IsA("BasePart") then
+                desc.CanCollide = false
+            end
+        end)
     end)
+    -- Monitor para garantir que partes novas fiquem sem colisão mesmo em personagem já existente
+    if Player.Character then
+        Player.Character.DescendantAdded:Connect(function(desc)
+            if NoClipSettings.Enabled and desc:IsA("BasePart") then
+                desc.CanCollide = false
+            end
+        end)
+    end
     return connections
 end
 GlobalSystem:RegisterFunction("NoClipSystem", CreateNoClipSystem, true)
