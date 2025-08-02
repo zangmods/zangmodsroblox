@@ -15,7 +15,7 @@ function gradient(text, startColor, endColor)
 end
 
 local Window = WindUI:CreateWindow({
-    Title = "ZangModffs Hudb",
+    Title = "ZangModffs Hub",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
     Author = "Ink Game alfa",
@@ -89,77 +89,134 @@ local RunService = game:GetService("RunService")
 local SpeedSettings = { Enabled = false, CurrentSpeed = 16 }
 local NoClipSettings = { Enabled = false }
 
+-- Cache para partes do personagem para otimizar performance
+local CharacterParts = {}
+local NoClipConnections = {}
+
 local function SetWalkSpeed(speed)
     local char = Player.Character
     local hum = char and char:FindFirstChild("Humanoid")
     if hum then hum.WalkSpeed = speed end
 end
 
-local function SetNoClipEnabled(enabled)
+-- Sistema NoClip completamente reformulado e mais eficiente
+local function UpdateCharacterPartsCache()
+    CharacterParts = {}
     local char = Player.Character
     if char then
         for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = not enabled
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                CharacterParts[part] = part.CanCollide
             end
         end
     end
 end
 
-local function CreateGlobalHeartbeatSystem()
-    local connections = {}
-
-    local function onCharacter(char)
-        local function applyNoClip()
-            if NoClipSettings.Enabled then
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
+local function SetNoClipEnabled(enabled)
+    local char = Player.Character
+    if not char then return end
+    
+    -- Limpa conexões antigas se existirem
+    for _, conn in pairs(NoClipConnections) do
+        if conn then conn:Disconnect() end
+    end
+    NoClipConnections = {}
+    
+    if enabled then
+        -- Atualiza cache das partes
+        UpdateCharacterPartsCache()
+        
+        -- Desabilita colisão para todas as partes atuais
+        for part, _ in pairs(CharacterParts) do
+            if part and part.Parent then
+                part.CanCollide = false
             end
         end
-
-        char:WaitForChild("Humanoid", 5)
-        RunService.Heartbeat:Wait()
-
-        SetWalkSpeed(SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16)
-        applyNoClip()
-
-        -- Mantém NoClip em peças novas adicionadas ao personagem
-        connections.descAdded = char.DescendantAdded:Connect(function(desc)
-            if NoClipSettings.Enabled and desc:IsA("BasePart") then
+        
+        -- Monitora novas partes adicionadas
+        NoClipConnections.descendantAdded = char.DescendantAdded:Connect(function(desc)
+            if desc:IsA("BasePart") and desc.Name ~= "HumanoidRootPart" then
+                CharacterParts[desc] = desc.CanCollide
                 desc.CanCollide = false
+                
+                -- Monitora mudanças na propriedade CanCollide desta parte específica
+                local propertyConnection
+                propertyConnection = desc:GetPropertyChangedSignal("CanCollide"):Connect(function()
+                    if NoClipSettings.Enabled and desc.CanCollide then
+                        desc.CanCollide = false
+                    end
+                end)
+                
+                -- Armazena a conexão para limpeza posterior
+                NoClipConnections[desc] = propertyConnection
             end
         end)
+        
+        -- Monitora remoção de partes
+        NoClipConnections.descendantRemoving = char.DescendantRemoving:Connect(function(desc)
+            if CharacterParts[desc] then
+                CharacterParts[desc] = nil
+            end
+            if NoClipConnections[desc] then
+                NoClipConnections[desc]:Disconnect()
+                NoClipConnections[desc] = nil
+            end
+        end)
+        
+        -- Monitora mudanças nas propriedades das partes existentes
+        for part, _ in pairs(CharacterParts) do
+            if part and part.Parent then
+                local propertyConnection = part:GetPropertyChangedSignal("CanCollide"):Connect(function()
+                    if NoClipSettings.Enabled and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end)
+                NoClipConnections[part] = propertyConnection
+            end
+        end
+        
+    else
+        -- Restaura colisão original
+        for part, originalState in pairs(CharacterParts) do
+            if part and part.Parent then
+                part.CanCollide = originalState
+            end
+        end
+        CharacterParts = {}
     end
+end
 
-    -- Aplica a cada batida do jogo
+local function CreateGlobalHeartbeatSystem()
+    local connections = {}
+    
     connections.heartbeat = RunService.Heartbeat:Connect(function()
         -- Speed Hack
         local char = Player.Character
         local hum = char and char:FindFirstChild("Humanoid")
         if hum then
             local wantedSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
-            if hum.WalkSpeed ~= wantedSpeed then
-                hum.WalkSpeed = wantedSpeed
+            if hum.WalkSpeed ~= wantedSpeed then hum.WalkSpeed = wantedSpeed end
+        end
+        
+        -- NoClip - Sistema mais agressivo para garantir que funcione sempre
+        if NoClipSettings.Enabled and char then
+            -- Força a atualização de todas as partes a cada frame para garantir persistência
+            for part, _ in pairs(CharacterParts) do
+                if part and part.Parent and part.CanCollide then
+                    part.CanCollide = false
+                end
             end
         end
-
-        -- NoClip permanente
-        if NoClipSettings.Enabled then
-            SetNoClipEnabled(true)
-        end
     end)
-
-    -- Quando novo personagem for carregado
-    connections.charConn = Player.CharacterAdded:Connect(onCharacter)
-
-    -- Caso já esteja com personagem
-    if Player.Character then
-        onCharacter(Player.Character)
-    end
-
+    
+    connections.charConn = Player.CharacterAdded:Connect(function(char)
+        char:WaitForChild("Humanoid", 5)
+        wait(0.1) -- Pequena espera para garantir que tudo carregou
+        
+        SetWalkSpeed(SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16)
+        SetNoClipEnabled(NoClipSettings.Enabled)
+    end)
+    
     return connections
 end
 GlobalSystem:RegisterFunction("GlobalHeartbeatSystem", CreateGlobalHeartbeatSystem, true)
@@ -405,6 +462,22 @@ Tabs.Mingle:Toggle({
 Window:SelectTab(1)
 Window:OnClose(function()
     print("UI fechada completamente - limpando sistemas...")
+    
+    -- Limpa especificamente as conexões do NoClip antes de limpar tudo
+    for _, conn in pairs(NoClipConnections) do
+        if conn then conn:Disconnect() end
+    end
+    NoClipConnections = {}
+    
+    -- Restaura colisões se necessário
+    if NoClipSettings.Enabled then
+        for part, originalState in pairs(CharacterParts) do
+            if part and part.Parent then
+                part.CanCollide = originalState
+            end
+        end
+    end
+    
     GlobalSystem:ClearAll()
     print("Todos os sistemas foram limpos.")
 end)
@@ -412,3 +485,4 @@ end)
 print("ZangMods Hub carregado com sistemas SEMPRE ATIVOS!")
 print("As funções continuam funcionando mesmo minimizando a UI!")
 print("CORREÇÃO FINAL: Speed/NoClip/ESP SEMPRE ATIVOS, UI desacoplada!")
+print("NoClip CORRIGIDO: Agora persiste através de todas as paredes!")
