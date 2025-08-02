@@ -15,7 +15,7 @@ function gradient(text, startColor, endColor)
 end
 
 local Window = WindUI:CreateWindow({
-    Title = "ZangModffs Hub",
+    Title = "ZangModffs Hudb",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
     Author = "Ink Game alfa",
