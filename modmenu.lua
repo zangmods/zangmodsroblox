@@ -99,35 +99,67 @@ local function SetNoClipEnabled(enabled)
     local char = Player.Character
     if char then
         for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = not enabled end
+            if part:IsA("BasePart") then
+                part.CanCollide = not enabled
+            end
         end
     end
 end
 
 local function CreateGlobalHeartbeatSystem()
     local connections = {}
+
+    local function onCharacter(char)
+        local function applyNoClip()
+            if NoClipSettings.Enabled then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+
+        char:WaitForChild("Humanoid", 5)
+        RunService.Heartbeat:Wait()
+
+        SetWalkSpeed(SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16)
+        applyNoClip()
+
+        -- Mantém NoClip em peças novas adicionadas ao personagem
+        connections.descAdded = char.DescendantAdded:Connect(function(desc)
+            if NoClipSettings.Enabled and desc:IsA("BasePart") then
+                desc.CanCollide = false
+            end
+        end)
+    end
+
+    -- Aplica a cada batida do jogo
     connections.heartbeat = RunService.Heartbeat:Connect(function()
         -- Speed Hack
         local char = Player.Character
         local hum = char and char:FindFirstChild("Humanoid")
         if hum then
             local wantedSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
-            if hum.WalkSpeed ~= wantedSpeed then hum.WalkSpeed = wantedSpeed end
+            if hum.WalkSpeed ~= wantedSpeed then
+                hum.WalkSpeed = wantedSpeed
+            end
         end
-        -- NoClip
+
+        -- NoClip permanente
         if NoClipSettings.Enabled then
             SetNoClipEnabled(true)
         end
     end)
-    connections.charConn = Player.CharacterAdded:Connect(function(char)
-        char:WaitForChild("Humanoid", 5)
-        RunService.Heartbeat:Wait()
-        SetWalkSpeed(SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16)
-        SetNoClipEnabled(NoClipSettings.Enabled)
-        char.DescendantAdded:Connect(function(desc)
-            if NoClipSettings.Enabled and desc:IsA("BasePart") then desc.CanCollide = false end
-        end)
-    end)
+
+    -- Quando novo personagem for carregado
+    connections.charConn = Player.CharacterAdded:Connect(onCharacter)
+
+    -- Caso já esteja com personagem
+    if Player.Character then
+        onCharacter(Player.Character)
+    end
+
     return connections
 end
 GlobalSystem:RegisterFunction("GlobalHeartbeatSystem", CreateGlobalHeartbeatSystem, true)
