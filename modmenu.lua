@@ -85,13 +85,8 @@ end
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- ===== SISTEMA DE VELOCIDADE + NOCLIP OTIMIZADO =====
+-- ===== SISTEMA DE VELOCIDADE =====
 local SpeedSettings = { Enabled = false, CurrentSpeed = 16 }
-local NoClipSettings = { Enabled = false }
-
--- Cache otimizado para performance
-local CharacterParts = {}
-local NoClipConnections = {}
 
 local function SetWalkSpeed(speed)
     local char = Player.Character
@@ -99,78 +94,8 @@ local function SetWalkSpeed(speed)
     if hum then hum.WalkSpeed = speed end
 end
 
--- Sistema NoClip OTIMIZADO - Apenas os métodos mais eficazes
-local function UpdateCharacterPartsCache()
-    CharacterParts = {}
-    local char = Player.Character
-    if char then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                CharacterParts[part] = part.CanCollide
-            end
-        end
-    end
-end
-
-local function ApplyNoClip()
-    for part, _ in pairs(CharacterParts) do
-        if part and part.Parent and part.CanCollide then
-            part.CanCollide = false
-        end
-    end
-end
-
-local function SetNoClipEnabled(enabled)
-    local char = Player.Character
-    if not char then return end
-    
-    -- Limpa conexões antigas
-    for _, conn in pairs(NoClipConnections) do
-        if conn and typeof(conn) == "RBXScriptConnection" then 
-            conn:Disconnect() 
-        end
-    end
-    NoClipConnections = {}
-    
-    if enabled then
-        UpdateCharacterPartsCache()
-        ApplyNoClip()
-        
-        -- Método 1: Monitor de novas partes (eficiente)
-        NoClipConnections.descendantAdded = char.DescendantAdded:Connect(function(desc)
-            if desc:IsA("BasePart") and desc.Name ~= "HumanoidRootPart" then
-                CharacterParts[desc] = desc.CanCollide
-                desc.CanCollide = false
-            end
-        end)
-        
-        -- Método 2: Monitor de propriedades individuais (mais eficaz contra anticheat)
-        for part, _ in pairs(CharacterParts) do
-            if part and part.Parent then
-                local propertyConn = part:GetPropertyChangedSignal("CanCollide"):Connect(function()
-                    if NoClipSettings.Enabled and part.CanCollide then
-                        part.CanCollide = false
-                    end
-                end)
-                NoClipConnections[tostring(part)] = propertyConn
-            end
-        end
-        
-    else
-        -- Restaura estados originais
-        for part, originalState in pairs(CharacterParts) do
-            if part and part.Parent then
-                part.CanCollide = originalState
-            end
-        end
-        CharacterParts = {}
-    end
-end
-
 local function CreateGlobalHeartbeatSystem()
     local connections = {}
-    local lastNoClipCheck = 0
-    
     connections.heartbeat = RunService.Heartbeat:Connect(function()
         -- Speed Hack
         local char = Player.Character
@@ -179,27 +104,12 @@ local function CreateGlobalHeartbeatSystem()
             local wantedSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
             if hum.WalkSpeed ~= wantedSpeed then hum.WalkSpeed = wantedSpeed end
         end
-        
-        -- NoClip - Sistema otimizado (checa apenas a cada 0.1 segundos)
-        if NoClipSettings.Enabled and char then
-            local currentTime = tick()
-            if currentTime - lastNoClipCheck > 0.1 then
-                ApplyNoClip()
-                lastNoClipCheck = currentTime
-            end
-        end
     end)
     
     connections.charConn = Player.CharacterAdded:Connect(function(char)
         char:WaitForChild("Humanoid", 5)
         wait(0.2)
-        
         SetWalkSpeed(SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16)
-        
-        if NoClipSettings.Enabled then
-            wait(0.3)
-            SetNoClipEnabled(true)
-        end
     end)
     
     return connections
@@ -415,6 +325,21 @@ Tabs.RedLight:Button({
     end
 })
 
+-- ✅ NOVO BOTÃO ADICIONADO AQUI
+Tabs.RedLight:Button({
+    Title = "Teleportar para Coordenadas Fixas",
+    Callback = function()
+        local char = Player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = CFrame.new(-45.805057525634766, 1024.711669921875, 135.66622924804688)
+            print("Teleportado para a posição fixa com sucesso!")
+        else
+            warn("Erro: HumanoidRootPart não encontrado.")
+        end
+    end
+})
+
 for name, tab in pairs(Tabs) do
     if name ~= "Mingle" and name ~= "RedLight" and name ~= "Extra" and name ~= "ESP" then
         tab:Toggle({
@@ -434,41 +359,13 @@ Tabs.Mingle:Toggle({
         print("Mingle: " .. tostring(state))
     end
 })
-Tabs.Mingle:Toggle({
-    Title = "Atravessar Paredes (NoClip)",
-    Value = false,
-    Callback = function(state)
-        NoClipSettings.Enabled = state
-        SetNoClipEnabled(state)
-        print("NoClip Otimizado: " .. tostring(state) .. " - SEM LAG!")
-    end
-})
 
 Window:SelectTab(1)
 Window:OnClose(function()
     print("UI fechada completamente - limpando sistemas...")
-    
-    -- Limpa especificamente as conexões do NoClip antes de limpar tudo
-    for _, conn in pairs(NoClipConnections) do
-        if conn and typeof(conn) == "RBXScriptConnection" then 
-            conn:Disconnect() 
-        end
-    end
-    NoClipConnections = {}
-    
-    -- Restaura colisões se necessário
-    if NoClipSettings.Enabled then
-        for part, originalState in pairs(CharacterParts) do
-            if part and part.Parent then
-                part.CanCollide = originalState
-            end
-        end
-    end
-    
     GlobalSystem:ClearAll()
     print("Todos os sistemas foram limpos.")
 end)
 
 print("ZangMods Hub carregado com sistemas SEMPRE ATIVOS!")
 print("As funções continuam funcionando mesmo minimizando a UI!")
-print("✅ NoClip OTIMIZADO - Sem lag, máxima eficiência!")
