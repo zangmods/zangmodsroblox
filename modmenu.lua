@@ -85,13 +85,18 @@ end
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- ===== SISTEMA DE VELOCIDADE + NOCLIP SEMPRE ATIVOS =====
+-- ===== SISTEMA DE VELOCIDADE + NOCLIP ULTRA AVANÇADO =====
 local SpeedSettings = { Enabled = false, CurrentSpeed = 16 }
 local NoClipSettings = { Enabled = false }
 
--- Cache para partes do personagem para otimizar performance
+-- Cache múltiplo para diferentes métodos de NoClip
 local CharacterParts = {}
 local NoClipConnections = {}
+local AntiCheatBypass = {
+    lastUpdate = 0,
+    updateInterval = 0.1,
+    forceMode = false
+}
 
 local function SetWalkSpeed(speed)
     local char = Player.Character
@@ -99,95 +104,176 @@ local function SetWalkSpeed(speed)
     if hum then hum.WalkSpeed = speed end
 end
 
--- Sistema NoClip completamente reformulado e mais eficiente
+-- Sistema NoClip ULTRA RESISTENTE contra anticheats
 local function UpdateCharacterPartsCache()
     CharacterParts = {}
     local char = Player.Character
     if char then
         for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                CharacterParts[part] = part.CanCollide
+            if part:IsA("BasePart") then
+                -- Incluindo TODAS as partes, inclusive HumanoidRootPart para casos extremos
+                CharacterParts[part] = {
+                    originalCanCollide = part.CanCollide,
+                    part = part,
+                    lastForced = 0
+                }
             end
         end
     end
 end
 
+-- Método 1: NoClip Tradicional Melhorado
+local function ApplyTraditionalNoClip()
+    for part, data in pairs(CharacterParts) do
+        if part and part.Parent and data then
+            part.CanCollide = false
+            data.lastForced = tick()
+        end
+    end
+end
+
+-- Método 2: NoClip via CFrame (mais resistente)
+local function ApplyCFrameNoClip()
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp and NoClipSettings.Enabled then
+        -- Força o personagem a não colidir movendo ligeiramente a posição
+        local currentPos = hrp.Position
+        hrp.CFrame = hrp.CFrame + Vector3.new(0, 0.001, 0)
+        wait()
+        hrp.CFrame = CFrame.new(currentPos, currentPos + hrp.CFrame.LookVector)
+    end
+end
+
+-- Método 3: NoClip via Humanoid States
+local function ApplyHumanoidStateNoClip()
+    local char = Player.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hum and NoClipSettings.Enabled then
+        -- Força estados específicos que podem ajudar com NoClip
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
+    end
+end
+
+-- Sistema Principal de NoClip Multi-Método
 local function SetNoClipEnabled(enabled)
     local char = Player.Character
     if not char then return end
     
-    -- Limpa conexões antigas se existirem
+    -- Limpa conexões antigas
     for _, conn in pairs(NoClipConnections) do
-        if conn then conn:Disconnect() end
+        if conn and typeof(conn) == "RBXScriptConnection" then 
+            conn:Disconnect() 
+        end
     end
     NoClipConnections = {}
     
     if enabled then
-        -- Atualiza cache das partes
         UpdateCharacterPartsCache()
         
-        -- Desabilita colisão para todas as partes atuais
-        for part, _ in pairs(CharacterParts) do
-            if part and part.Parent then
-                part.CanCollide = false
-            end
-        end
+        -- Aplica NoClip imediatamente
+        ApplyTraditionalNoClip()
+        ApplyHumanoidStateNoClip()
         
-        -- Monitora novas partes adicionadas
+        -- Método 1: Monitor de Descendentes (mais agressivo)
         NoClipConnections.descendantAdded = char.DescendantAdded:Connect(function(desc)
-            if desc:IsA("BasePart") and desc.Name ~= "HumanoidRootPart" then
-                CharacterParts[desc] = desc.CanCollide
+            if desc:IsA("BasePart") then
+                CharacterParts[desc] = {
+                    originalCanCollide = desc.CanCollide,
+                    part = desc,
+                    lastForced = 0
+                }
                 desc.CanCollide = false
                 
-                -- Monitora mudanças na propriedade CanCollide desta parte específica
-                local propertyConnection
-                propertyConnection = desc:GetPropertyChangedSignal("CanCollide"):Connect(function()
-                    if NoClipSettings.Enabled and desc.CanCollide then
-                        desc.CanCollide = false
+                -- Monitor individual por parte
+                spawn(function()
+                    while NoClipSettings.Enabled and desc.Parent do
+                        if desc.CanCollide then
+                            desc.CanCollide = false
+                        end
+                        wait(0.05)
                     end
                 end)
-                
-                -- Armazena a conexão para limpeza posterior
-                NoClipConnections[desc] = propertyConnection
             end
         end)
         
-        -- Monitora remoção de partes
-        NoClipConnections.descendantRemoving = char.DescendantRemoving:Connect(function(desc)
-            if CharacterParts[desc] then
-                CharacterParts[desc] = nil
-            end
-            if NoClipConnections[desc] then
-                NoClipConnections[desc]:Disconnect()
-                NoClipConnections[desc] = nil
+        -- Método 2: Sistema de força bruta múltipla
+        NoClipConnections.bruteForceStepped = RunService.Stepped:Connect(function()
+            if NoClipSettings.Enabled then
+                ApplyTraditionalNoClip()
             end
         end)
         
-        -- Monitora mudanças nas propriedades das partes existentes
-        for part, _ in pairs(CharacterParts) do
+        NoClipConnections.bruteForceHeartbeat = RunService.Heartbeat:Connect(function()
+            if NoClipSettings.Enabled then
+                local currentTime = tick()
+                -- Aplica em intervalos diferentes para confundir anticheat
+                if currentTime - AntiCheatBypass.lastUpdate > AntiCheatBypass.updateInterval then
+                    ApplyTraditionalNoClip()
+                    AntiCheatBypass.lastUpdate = currentTime
+                    -- Varia o intervalo para ser menos previsível
+                    AntiCheatBypass.updateInterval = math.random(50, 150) / 1000
+                end
+            end
+        end)
+        
+        -- Método 3: Monitor de propriedades individual e agressivo
+        for part, data in pairs(CharacterParts) do
             if part and part.Parent then
-                local propertyConnection = part:GetPropertyChangedSignal("CanCollide"):Connect(function()
-                    if NoClipSettings.Enabled and part.CanCollide then
-                        part.CanCollide = false
+                local propertyConn = part:GetPropertyChangedSignal("CanCollide"):Connect(function()
+                    if NoClipSettings.Enabled then
+                        spawn(function()
+                            wait() -- Espera um frame
+                            if part and part.Parent and part.CanCollide then
+                                part.CanCollide = false
+                            end
+                        end)
                     end
                 end)
-                NoClipConnections[part] = propertyConnection
+                NoClipConnections[tostring(part)] = propertyConn
             end
         end
         
+        -- Método 4: Sistema de backup por spawn
+        spawn(function()
+            while NoClipSettings.Enabled do
+                ApplyTraditionalNoClip()
+                wait(0.1)
+            end
+        end)
+        
+        -- Método 5: Sistema CFrame de emergência
+        spawn(function()
+            while NoClipSettings.Enabled do
+                ApplyCFrameNoClip()
+                wait(0.2)
+            end
+        end)
+        
     else
-        -- Restaura colisão original
-        for part, originalState in pairs(CharacterParts) do
-            if part and part.Parent then
-                part.CanCollide = originalState
+        -- Restaura estados originais
+        for part, data in pairs(CharacterParts) do
+            if part and part.Parent and data then
+                part.CanCollide = data.originalCanCollide
             end
         end
         CharacterParts = {}
+        
+        -- Restaura estados do Humanoid
+        local hum = char and char:FindFirstChild("Humanoid")
+        if hum then
+            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
+        end
     end
 end
 
 local function CreateGlobalHeartbeatSystem()
     local connections = {}
+    local lastNoClipForce = 0
     
     connections.heartbeat = RunService.Heartbeat:Connect(function()
         -- Speed Hack
@@ -198,12 +284,42 @@ local function CreateGlobalHeartbeatSystem()
             if hum.WalkSpeed ~= wantedSpeed then hum.WalkSpeed = wantedSpeed end
         end
         
-        -- NoClip - Sistema mais agressivo para garantir que funcione sempre
+        -- NoClip - Sistema ULTRA agressivo
         if NoClipSettings.Enabled and char then
-            -- Força a atualização de todas as partes a cada frame para garantir persistência
-            for part, _ in pairs(CharacterParts) do
-                if part and part.Parent and part.CanCollide then
-                    part.CanCollide = false
+            local currentTime = tick()
+            
+            -- Força múltipla a cada 0.05 segundos
+            if currentTime - lastNoClipForce > 0.05 then
+                -- Método 1: Força tradicional
+                for part, data in pairs(CharacterParts) do
+                    if part and part.Parent and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+                
+                -- Método 2: Força via spawn para evitar yield
+                spawn(function()
+                    for part, data in pairs(CharacterParts) do
+                        if part and part.Parent then
+                            part.CanCollide = false
+                        end
+                    end
+                end)
+                
+                lastNoClipForce = currentTime
+            end
+        end
+    end)
+    
+    -- Sistema RenderStepped adicional (mais rápido que Heartbeat)
+    connections.renderStepped = RunService.RenderStepped:Connect(function()
+        if NoClipSettings.Enabled then
+            local char = Player.Character
+            if char then
+                for part, data in pairs(CharacterParts) do
+                    if part and part.Parent and part.CanCollide then
+                        part.CanCollide = false
+                    end
                 end
             end
         end
@@ -211,10 +327,15 @@ local function CreateGlobalHeartbeatSystem()
     
     connections.charConn = Player.CharacterAdded:Connect(function(char)
         char:WaitForChild("Humanoid", 5)
-        wait(0.1) -- Pequena espera para garantir que tudo carregou
+        wait(0.2) -- Espera maior para garantir carregamento completo
         
         SetWalkSpeed(SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16)
-        SetNoClipEnabled(NoClipSettings.Enabled)
+        
+        if NoClipSettings.Enabled then
+            -- Reaplica NoClip com delay para novo personagem
+            wait(0.5)
+            SetNoClipEnabled(true)
+        end
     end)
     
     return connections
@@ -455,7 +576,23 @@ Tabs.Mingle:Toggle({
     Callback = function(state)
         NoClipSettings.Enabled = state
         SetNoClipEnabled(state)
-        print("NoClip: " .. tostring(state) .. " - SEMPRE ATIVO!")
+        print("NoClip ULTRA: " .. tostring(state) .. " - RESISTENTE A ANTICHEAT!")
+    end
+})
+
+-- Botão adicional para forçar NoClip caso pare
+Tabs.Mingle:Button({
+    Title = "🔴 FORÇAR NoClip (Emergência)",
+    Callback = function()
+        if NoClipSettings.Enabled then
+            print("Forçando NoClip de emergência...")
+            SetNoClipEnabled(false)
+            wait(0.1)
+            SetNoClipEnabled(true)
+            print("NoClip reativado com força total!")
+        else
+            print("Ative o NoClip primeiro!")
+        end
     end
 })
 
@@ -465,15 +602,17 @@ Window:OnClose(function()
     
     -- Limpa especificamente as conexões do NoClip antes de limpar tudo
     for _, conn in pairs(NoClipConnections) do
-        if conn then conn:Disconnect() end
+        if conn and typeof(conn) == "RBXScriptConnection" then 
+            conn:Disconnect() 
+        end
     end
     NoClipConnections = {}
     
     -- Restaura colisões se necessário
     if NoClipSettings.Enabled then
-        for part, originalState in pairs(CharacterParts) do
-            if part and part.Parent then
-                part.CanCollide = originalState
+        for part, data in pairs(CharacterParts) do
+            if part and part.Parent and data then
+                part.CanCollide = data.originalCanCollide
             end
         end
     end
@@ -484,5 +623,5 @@ end)
 
 print("ZangMods Hub carregado com sistemas SEMPRE ATIVOS!")
 print("As funções continuam funcionando mesmo minimizando a UI!")
-print("CORREÇÃO FINAL: Speed/NoClip/ESP SEMPRE ATIVOS, UI desacoplada!")
-print("NoClip CORRIGIDO: Agora persiste através de todas as paredes!")
+print("SISTEMA NOCLIP ULTRA RESISTENTE ATIVADO!")
+print("🔥 NoClip com 5 métodos simultâneos para burlar anticheats!")
