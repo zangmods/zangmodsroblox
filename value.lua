@@ -283,8 +283,11 @@ local function createModuleDropdown()
     local scrollFrame = Instance.new("ScrollingFrame")
     scrollFrame.Size = UDim2.new(1, -10, 1, -10)
     scrollFrame.Position = UDim2.new(0, 5, 0, 5)
-    scrollFrame.BackgroundTransparency = 1
-    scrollFrame.ScrollBarThickness = 6
+    scrollFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    scrollFrame.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    scrollFrame.BorderSizePixel = 1
+    scrollFrame.ScrollBarThickness = 8
+    scrollFrame.ZIndex = 11
     scrollFrame.Parent = dropdownList
     
     local layout = Instance.new("UIListLayout")
@@ -292,16 +295,41 @@ local function createModuleDropdown()
     layout.Padding = UDim.new(0, 2)
     layout.Parent = scrollFrame
     
+    if #modules == 0 then
+        local noModulesLabel = Instance.new("TextLabel")
+        noModulesLabel.Size = UDim2.new(1, -10, 0, 30)
+        noModulesLabel.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+        noModulesLabel.Text = "❌ Nenhum módulo encontrado"
+        noModulesLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
+        noModulesLabel.TextSize = 12
+        noModulesLabel.Font = Enum.Font.Gotham
+        noModulesLabel.ZIndex = 12
+        noModulesLabel.Parent = scrollFrame
+        
+        local noModulesCorner = Instance.new("UICorner")
+        noModulesCorner.CornerRadius = UDim.new(0, 3)
+        noModulesCorner.Parent = noModulesLabel
+    end
+    
     for i, module in pairs(modules) do
         local button = Instance.new("TextButton")
-        button.Size = UDim2.new(1, -10, 0, 25)
-        button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        button.Text = "📄 " .. module.name .. " (" .. module.path .. ")"
+        button.Size = UDim2.new(1, -10, 0, 30)
+        button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        button.BorderColor3 = Color3.fromRGB(100, 100, 100)
+        button.BorderSizePixel = 1
+        button.Text = "📄 " .. module.name
         button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        button.TextSize = 10
+        button.TextSize = 11
         button.Font = Enum.Font.Gotham
         button.TextXAlignment = Enum.TextXAlignment.Left
+        button.ZIndex = 12
+        button.Active = true
         button.Parent = scrollFrame
+        
+        -- Padding no texto do botão
+        local buttonPadding = Instance.new("UIPadding")
+        buttonPadding.PaddingLeft = UDim.new(0, 8)
+        buttonPadding.Parent = button
         
         local buttonCorner = Instance.new("UICorner")
         buttonCorner.CornerRadius = UDim.new(0, 3)
@@ -318,11 +346,11 @@ local function createModuleDropdown()
         
         -- Hover effect
         button.MouseEnter:Connect(function()
-            button.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            button.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
         end)
         
         button.MouseLeave:Connect(function()
-            button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
         end)
     end
     
@@ -370,16 +398,40 @@ local function scanFunctions()
     layout.Padding = UDim.new(0, 3)
     layout.Parent = functionsScrollFrame
     
+    if #foundFunctions == 0 then
+        local noFuncLabel = Instance.new("TextLabel")
+        noFuncLabel.Size = UDim2.new(1, -10, 0, 40)
+        noFuncLabel.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+        noFuncLabel.Text = "❌ Nenhuma função encontrada no módulo selecionado"
+        noFuncLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
+        noFuncLabel.TextSize = 11
+        noFuncLabel.Font = Enum.Font.Gotham
+        noFuncLabel.TextWrapped = true
+        noFuncLabel.ZIndex = 3
+        noFuncLabel.Parent = functionsScrollFrame
+        
+        local noFuncCorner = Instance.new("UICorner")
+        noFuncCorner.CornerRadius = UDim.new(0, 5)
+        noFuncCorner.Parent = noFuncLabel
+        
+        functionsScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 50)
+        return
+    end
+    
     for i, funcData in pairs(foundFunctions) do
         local button = Instance.new("TextButton")
         button.Name = "Function" .. i
-        button.Size = UDim2.new(1, -10, 0, 35)
-        button.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+        button.Size = UDim2.new(1, -15, 0, 40)
+        button.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+        button.BorderColor3 = Color3.fromRGB(100, 100, 100)
+        button.BorderSizePixel = 1
         button.Text = "⚙️ Função #" .. i .. " (" .. funcData.nups .. " upvalues)"
         button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        button.TextSize = 10
+        button.TextSize = 11
         button.Font = Enum.Font.Gotham
         button.TextXAlignment = Enum.TextXAlignment.Left
+        button.ZIndex = 3
+        button.Active = true
         button.Parent = functionsScrollFrame
         
         local buttonCorner = Instance.new("UICorner")
