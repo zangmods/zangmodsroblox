@@ -116,188 +116,7 @@ local function CreateGlobalHeartbeatSystem()
 end
 GlobalSystem:RegisterFunction("GlobalHeartbeatSystem", CreateGlobalHeartbeatSystem, true)
 
--- ===== SISTEMA ESP =====
-local ESPSettings = { NameEnabled = false, HealthEnabled = false }
-local ESPObjects, HealthConnections = {}, {}
-
-local function createESPName(player)
-    if player == Player then return end
-    if player.Character and player.Character:FindFirstChild("Head") then
-        if ESPObjects[player.Name] and ESPObjects[player.Name].Name then ESPObjects[player.Name].Name:Destroy() end
-        local head = player.Character.Head
-        local billboard = Instance.new("BillboardGui")
-        local nameLabel = Instance.new("TextLabel")
-        billboard.Name = "ESP_Name_" .. player.Name
-        billboard.Parent = head
-        billboard.Size = UDim2.new(0, 200, 0, 30)
-        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-        billboard.AlwaysOnTop = true
-        nameLabel.Parent = billboard
-        nameLabel.Size = UDim2.new(1, 0, 1, 0)
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Text = player.Name
-        nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
-        nameLabel.TextScaled = true
-        nameLabel.TextStrokeTransparency = 0
-        nameLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
-        nameLabel.Font = Enum.Font.SourceSansBold
-        ESPObjects[player.Name] = ESPObjects[player.Name] or {}
-        ESPObjects[player.Name].Name = billboard
-    end
-end
-local function removeAllESPName()
-    for _, objs in pairs(ESPObjects) do
-        if objs.Name then objs.Name:Destroy(); objs.Name = nil end
-    end
-end
-
-local function createESPHealth(player)
-    if player == Player then return end
-    if player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
-        if ESPObjects[player.Name] and ESPObjects[player.Name].Health then ESPObjects[player.Name].Health:Destroy() end
-        local head = player.Character.Head
-        local humanoid = player.Character.Humanoid
-        local billboard = Instance.new("BillboardGui")
-        local frame = Instance.new("Frame")
-        local bar = Instance.new("Frame")
-        local text = Instance.new("TextLabel")
-        billboard.Name = "ESP_Health_" .. player.Name
-        billboard.Parent = head
-        billboard.Size = UDim2.new(0, 100, 0, 20)
-        billboard.StudsOffset = Vector3.new(0, 1.5, 0)
-        billboard.AlwaysOnTop = true
-        frame.Parent = billboard
-        frame.Size = UDim2.new(1, 0, 0.7, 0)
-        frame.Position = UDim2.new(0,0,0,0)
-        frame.BackgroundColor3 = Color3.fromRGB(50,50,50)
-        frame.BorderSizePixel = 1
-        frame.BorderColor3 = Color3.fromRGB(255,255,255)
-        bar.Parent = frame
-        bar.Size = UDim2.new(humanoid.Health/humanoid.MaxHealth,0,1,0)
-        bar.Position = UDim2.new(0,0,0,0)
-        bar.BackgroundColor3 = Color3.fromRGB(0,255,0)
-        text.Parent = billboard
-        text.Size = UDim2.new(1,0,0.3,0)
-        text.Position = UDim2.new(0,0,0.7,0)
-        text.BackgroundTransparency = 1
-        text.Text = math.floor(humanoid.Health).."/"..math.floor(humanoid.MaxHealth)
-        text.TextColor3 = Color3.fromRGB(255,255,255)
-        text.TextScaled = true
-        text.TextStrokeTransparency = 0
-        text.TextStrokeColor3 = Color3.fromRGB(0,0,0)
-        text.Font = Enum.Font.SourceSans
-        if HealthConnections[player.Name] then HealthConnections[player.Name]:Disconnect() end
-        HealthConnections[player.Name] = humanoid.HealthChanged:Connect(function()
-            local pct = humanoid.Health/humanoid.MaxHealth
-            bar.Size = UDim2.new(pct,0,1,0)
-            bar.BackgroundColor3 = pct>0.6 and Color3.fromRGB(0,255,0) or (pct>0.3 and Color3.fromRGB(255,255,0) or Color3.fromRGB(255,0,0))
-            text.Text = math.floor(humanoid.Health).."/"..math.floor(humanoid.MaxHealth)
-        end)
-        ESPObjects[player.Name] = ESPObjects[player.Name] or {}
-        ESPObjects[player.Name].Health = billboard
-    end
-end
-local function removeAllESPHealth()
-    for name, objs in pairs(ESPObjects) do
-        if objs.Health then objs.Health:Destroy(); objs.Health = nil end
-        if HealthConnections[name] then HealthConnections[name]:Disconnect(); HealthConnections[name] = nil end
-    end
-end
-
-local function ESPUpdater()
-    local connections = {}
-    connections.playerAdded = game.Players.PlayerAdded:Connect(function(player)
-        if ESPSettings.NameEnabled then createESPName(player) end
-        if ESPSettings.HealthEnabled then createESPHealth(player) end
-    end)
-    connections.playerRemoving = game.Players.PlayerRemoving:Connect(function(player)
-        removeAllESPName()
-        removeAllESPHealth()
-    end)
-    connections.heartbeat = RunService.Heartbeat:Connect(function()
-        for _, player in pairs(game.Players:GetPlayers()) do
-            if player ~= Player and player.Character then
-                if ESPSettings.NameEnabled then
-                    if not ESPObjects[player.Name] or not ESPObjects[player.Name].Name or not ESPObjects[player.Name].Name.Parent then
-                        createESPName(player)
-                    end
-                end
-                if ESPSettings.HealthEnabled then
-                    if not ESPObjects[player.Name] or not ESPObjects[player.Name].Health or not ESPObjects[player.Name].Health.Parent then
-                        createESPHealth(player)
-                    end
-                end
-            end
-        end
-    end)
-    return connections
-end
-GlobalSystem:RegisterFunction("ESPSystem", ESPUpdater, true)
-
--- ===== INTERFACE =====
-local Tabs = {}
-local SectionGames = Window:Section({ Title = "Jogos", Opened = true })
-local SectionExtra = Window:Section({ Title = "Funções Extras", Opened = true })
-Tabs.RedLight = SectionGames:Tab({ Title = "Red Light", Icon = "alert-octagon" })
-Tabs.Dalgona = SectionGames:Tab({ Title = "Dalgona", Icon = "circle" })
-Tabs.TugOfWar = SectionGames:Tab({ Title = "Tug of War", Icon = "git-merge" })
-Tabs.HideAndSeek = SectionGames:Tab({ Title = "Hide and Seek", Icon = "eye-off" })
-Tabs.JumpRope = SectionGames:Tab({ Title = "Jump Rope", Icon = "move" })
-Tabs.GlassBridge = SectionGames:Tab({ Title = "Glass Bridge", Icon = "square" })
-Tabs.Mingle = SectionGames:Tab({ Title = "Mingle", Icon = "users" })
-Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
-Tabs.Extra = SectionExtra:Tab({ Title = "Funções Extra", Icon = "wand" })
-Tabs.ESP = SectionExtra:Tab({ Title = "ESP", Icon = "eye" })
-
-Tabs.Extra:Toggle({
-    Title = "Alterar Velocidade",
-    Value = false,
-    Callback = function(state)
-        SpeedSettings.Enabled = state
-        SetWalkSpeed(state and SpeedSettings.CurrentSpeed or 16)
-        print("Velocidade: " .. tostring(state) .. " - SEMPRE ATIVO!")
-    end
-})
-Tabs.Extra:Slider({
-    Title = "Velocidade do Personagem",
-    Value = { Min = 1, Max = 100, Default = 16 },
-    Callback = function(value)
-        SpeedSettings.CurrentSpeed = value
-        if SpeedSettings.Enabled then SetWalkSpeed(value) end
-        print("Velocidade definida para: " .. value .. " - SEMPRE ATIVO!")
-    end
-})
-Tabs.ESP:Toggle({
-    Title = "ESP Name",
-    Value = false,
-    Callback = function(state)
-        ESPSettings.NameEnabled = state
-        if state then
-            for _, player in pairs(game.Players:GetPlayers()) do
-                createESPName(player)
-            end
-        else
-            removeAllESPName()
-        end
-        print("ESP Name: " .. tostring(state) .. " - SEMPRE ATIVO!")
-    end
-})
-Tabs.ESP:Toggle({
-    Title = "ESP Health",
-    Value = false,
-    Callback = function(state)
-        ESPSettings.HealthEnabled = state
-        if state then
-            for _, player in pairs(game.Players:GetPlayers()) do
-                createESPHealth(player)
-            end
-        else
-            removeAllESPHealth()
-        end
-        print("ESP Health: " .. tostring(state) .. " - SEMPRE ATIVO!")
-    end
-})
-
+-- ===== FUNÇÕES DOS JOGOS =====
 local function teleportForward(distance)
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -311,6 +130,35 @@ local function teleportForward(distance)
     end
 end
 
+local function CompleteDalgona()
+    local DalgonaClientModule = game.ReplicatedStorage.Modules.Games.DalgonaClient
+
+    for _, Value in ipairs(getreg()) do
+        if typeof(Value) == "function" and islclosure(Value) then
+            if getfenv(Value).script == DalgonaClientModule then
+                if debug.getinfo(Value).nups == 73 then
+                    setupvalue(Value, 31, 9e9)  
+                    print("Dalgona completed!")
+                    break
+                end
+            end
+        end
+    end
+end
+
+-- ===== INTERFACE =====
+local Tabs = {}
+local SectionGames = Window:Section({ Title = "Jogos", Opened = true })
+Tabs.RedLight = SectionGames:Tab({ Title = "Red Light", Icon = "alert-octagon" })
+Tabs.Dalgona = SectionGames:Tab({ Title = "Dalgona", Icon = "circle" })
+Tabs.TugOfWar = SectionGames:Tab({ Title = "Tug of War", Icon = "git-merge" })
+Tabs.HideAndSeek = SectionGames:Tab({ Title = "Hide and Seek", Icon = "eye-off" })
+Tabs.JumpRope = SectionGames:Tab({ Title = "Jump Rope", Icon = "move" })
+Tabs.GlassBridge = SectionGames:Tab({ Title = "Glass Bridge", Icon = "square" })
+Tabs.Mingle = SectionGames:Tab({ Title = "Mingle", Icon = "users" })
+Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
+
+-- ===== ABA RED LIGHT =====
 Tabs.RedLight:Toggle({
     Title = "Ativar",
     Value = false,
@@ -324,8 +172,6 @@ Tabs.RedLight:Button({
         teleportForward(500)
     end
 })
-
--- ✅ NOVO BOTÃO ADICIONADO AQUI
 Tabs.RedLight:Button({
     Title = "Teleportar para Coordenadas Fixas",
     Callback = function()
@@ -340,8 +186,24 @@ Tabs.RedLight:Button({
     end
 })
 
+-- ===== ABA DALGONA =====
+Tabs.Dalgona:Toggle({
+    Title = "Ativar",
+    Value = false,
+    Callback = function(state)
+        print("Dalgona: " .. tostring(state))
+    end
+})
+Tabs.Dalgona:Button({
+    Title = "Completar Dalgona",
+    Callback = function()
+        CompleteDalgona()
+    end
+})
+
+-- ===== OUTRAS ABAS =====
 for name, tab in pairs(Tabs) do
-    if name ~= "Mingle" and name ~= "RedLight" and name ~= "Extra" and name ~= "ESP" then
+    if name ~= "Mingle" and name ~= "RedLight" and name ~= "Dalgona" then
         tab:Toggle({
             Title = "Ativar",
             Value = false,
@@ -367,5 +229,5 @@ Window:OnClose(function()
     print("Todos os sistemas foram limpos.")
 end)
 
-print("ZangMods Hub carregado com sistemas SEMPRE ATIVOS!")
-print("As funções continuam funcionando mesmo minimizando a UI!")
+print("ZangMods Hub carregado!")
+print("Botão Completar Dalgona adicionado na aba Dalgona!")
