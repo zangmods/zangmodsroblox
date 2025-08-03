@@ -206,20 +206,11 @@ local modules = {}
 local function findModules()
     modules = {}
     
-    -- Buscar em ReplicatedStorage
-    for _, obj in pairs(game.ReplicatedStorage:GetDescendants()) do
-        if obj:IsA("ModuleScript") then
-            table.insert(modules, {
-                name = obj.Name,
-                path = obj:GetFullName(),
-                object = obj
-            })
-        end
-    end
+    print("🔍 Buscando módulos...")
     
-    -- Buscar em outros lugares
-    for _, service in pairs({game.StarterGui, game.StarterPlayer, game.Workspace}) do
-        for _, obj in pairs(service:GetDescendants()) do
+    -- Buscar em ReplicatedStorage
+    pcall(function()
+        for _, obj in pairs(game.ReplicatedStorage:GetDescendants()) do
             if obj:IsA("ModuleScript") or obj:IsA("LocalScript") then
                 table.insert(modules, {
                     name = obj.Name,
@@ -228,9 +219,33 @@ local function findModules()
                 })
             end
         end
+    end)
+    
+    -- Buscar em outros lugares comuns
+    for _, service in pairs({game.StarterGui, game.StarterPlayer, game.Workspace, game.ServerStorage}) do
+        pcall(function()
+            for _, obj in pairs(service:GetDescendants()) do
+                if obj:IsA("ModuleScript") or obj:IsA("LocalScript") then
+                    table.insert(modules, {
+                        name = obj.Name,
+                        path = obj:GetFullName(),
+                        object = obj
+                    })
+                end
+            end
+        end)
     end
     
-    print("🔍 Encontrados", #modules, "módulos/scripts")
+    print("✅ Encontrados", #modules, "módulos/scripts total")
+    
+    -- Se não encontrou nada, adiciona exemplos
+    if #modules == 0 then
+        table.insert(modules, {
+            name = "Exemplo - Nenhum módulo encontrado",
+            path = "game.ReplicatedStorage.ExemploModulo",
+            object = nil
+        })
+    end
 end
 
 -- Função para criar dropdown de módulos
@@ -240,12 +255,15 @@ local function createModuleDropdown()
         screenGui.ModuleDropdownList:Destroy()
     end
     
+    print("🔽 Criando dropdown com", #modules, "módulos")
+    
     local dropdownList = Instance.new("Frame")
     dropdownList.Name = "ModuleDropdownList"
-    dropdownList.Size = UDim2.new(0, 500, 0, 200)
+    dropdownList.Size = UDim2.new(0, 500, 0, math.min(300, #modules * 30 + 20))
     dropdownList.Position = UDim2.new(0, moduleDropdown.AbsolutePosition.X, 0, moduleDropdown.AbsolutePosition.Y + 40)
     dropdownList.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    dropdownList.BorderSizePixel = 0
+    dropdownList.BorderSizePixel = 1
+    dropdownList.BorderColor3 = Color3.fromRGB(100, 100, 100)
     dropdownList.Parent = screenGui
     dropdownList.ZIndex = 10
     
@@ -283,8 +301,10 @@ local function createModuleDropdown()
         button.MouseButton1Click:Connect(function()
             selectedModule = module.object
             moduleDropdown.Text = "📄 " .. module.name
+            moduleDropdown.BackgroundColor3 = Color3.fromRGB(0, 150, 60) -- Visual feedback
             dropdownList:Destroy()
             print("✅ Módulo selecionado:", module.name)
+            print("📍 Path:", module.path)
         end)
         
         -- Hover effect
@@ -506,7 +526,7 @@ closeButton.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
-moduleDropdown.MouseButton1Click:Convert(function()
+moduleDropdown.MouseButton1Click:Connect(function()
     findModules()
     createModuleDropdown()
 end)
