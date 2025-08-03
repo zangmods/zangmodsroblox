@@ -100,7 +100,14 @@ moduleDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
 moduleDropdown.TextSize = 11
 moduleDropdown.Font = Enum.Font.Gotham
 moduleDropdown.TextXAlignment = Enum.TextXAlignment.Left
+moduleDropdown.ZIndex = 2
+moduleDropdown.Active = true
 moduleDropdown.Parent = moduleSection
+
+-- Padding no texto
+local textPadding = Instance.new("UIPadding")
+textPadding.PaddingLeft = UDim.new(0, 10)
+textPadding.Parent = moduleDropdown
 
 local dropdownCorner = Instance.new("UICorner")
 dropdownCorner.CornerRadius = UDim.new(0, 5)
@@ -116,6 +123,8 @@ scanButton.Text = "🔍 SCAN"
 scanButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 scanButton.TextSize = 12
 scanButton.Font = Enum.Font.GothamBold
+scanButton.ZIndex = 2
+scanButton.Active = true
 scanButton.Parent = moduleSection
 
 local scanCorner = Instance.new("UICorner")
@@ -523,17 +532,32 @@ end
 
 -- Eventos
 closeButton.MouseButton1Click:Connect(function()
+    print("🔴 Fechando GUI")
     screenGui:Destroy()
 end)
 
 moduleDropdown.MouseButton1Click:Connect(function()
+    print("🔽 Botão dropdown clicado!")
+    moduleDropdown.Text = "🔄 Carregando módulos..."
+    moduleDropdown.BackgroundColor3 = Color3.fromRGB(100, 100, 60)
+    
     findModules()
     createModuleDropdown()
+    
+    moduleDropdown.Text = "🔽 Clique para selecionar módulo..."
+    moduleDropdown.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 end)
 
 scanButton.MouseButton1Click:Connect(function()
+    print("🔍 Botão scan clicado!")
     scanFunctions()
 end)
+
+-- Teste se os botões estão funcionando
+print("🎮 Eventos conectados!")
+print("📍 moduleDropdown:", moduleDropdown)
+print("📍 scanButton:", scanButton)
+print("📍 closeButton:", closeButton)
 
 -- Tornar a GUI arrastável
 local dragging = false
