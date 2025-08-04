@@ -137,8 +137,15 @@ Tabs.Main:Toggle({
     Description = "Habilita função de dash",
     Value = false,
     Callback = function(state)
-        print("Desbloquear Dash: " .. tostring(state))
-        -- Aqui você adicionará o código do dash depois
+        if state then
+            -- Ativar dash
+            game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"].Value = 5
+            print("Desbloquear Dash: ATIVADO - Value definido para 5")
+        else
+            -- Desativar dash (voltar ao valor padrão)
+            game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"].Value = 0
+            print("Desbloquear Dash: DESATIVADO - Value definido para 0")
+        end
     end
 })
 
