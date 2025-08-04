@@ -85,37 +85,6 @@ end
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- ===== SISTEMA DE VELOCIDADE =====
-local SpeedSettings = { Enabled = false, CurrentSpeed = 16 }
-
-local function SetWalkSpeed(speed)
-    local char = Player.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    if hum then hum.WalkSpeed = speed end
-end
-
-local function CreateGlobalHeartbeatSystem()
-    local connections = {}
-    connections.heartbeat = RunService.Heartbeat:Connect(function()
-        -- Speed Hack
-        local char = Player.Character
-        local hum = char and char:FindFirstChild("Humanoid")
-        if hum then
-            local wantedSpeed = SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16
-            if hum.WalkSpeed ~= wantedSpeed then hum.WalkSpeed = wantedSpeed end
-        end
-    end)
-    
-    connections.charConn = Player.CharacterAdded:Connect(function(char)
-        char:WaitForChild("Humanoid", 5)
-        wait(0.2)
-        SetWalkSpeed(SpeedSettings.Enabled and SpeedSettings.CurrentSpeed or 16)
-    end)
-    
-    return connections
-end
-GlobalSystem:RegisterFunction("GlobalHeartbeatSystem", CreateGlobalHeartbeatSystem, true)
-
 -- ===== FUNÇÕES DOS JOGOS =====
 local function teleportForward(distance)
     local char = Player.Character
@@ -146,17 +115,32 @@ local function CompleteDalgona()
     end
 end
 
--- ===== INTERFACE =====
+-- ===== INTERFACE - ABAS DIRETAS =====
 local Tabs = {}
-local SectionGames = Window:Section({ Title = "Jogos", Opened = true })
-Tabs.RedLight = SectionGames:Tab({ Title = "Red Light", Icon = "alert-octagon" })
-Tabs.Dalgona = SectionGames:Tab({ Title = "Dalgona", Icon = "circle" })
-Tabs.TugOfWar = SectionGames:Tab({ Title = "Tug of War", Icon = "git-merge" })
-Tabs.HideAndSeek = SectionGames:Tab({ Title = "Hide and Seek", Icon = "eye-off" })
-Tabs.JumpRope = SectionGames:Tab({ Title = "Jump Rope", Icon = "move" })
-Tabs.GlassBridge = SectionGames:Tab({ Title = "Glass Bridge", Icon = "square" })
-Tabs.Mingle = SectionGames:Tab({ Title = "Mingle", Icon = "users" })
-Tabs.Final = SectionGames:Tab({ Title = "Final", Icon = "flag" })
+
+-- ABA MAIN
+Tabs.Main = Window:Tab({ Title = "Main", Icon = "home" })
+
+-- ABAS DOS JOGOS (agora diretas na janela)
+Tabs.RedLight = Window:Tab({ Title = "Red Light", Icon = "alert-octagon" })
+Tabs.Dalgona = Window:Tab({ Title = "Dalgona", Icon = "circle" })
+Tabs.TugOfWar = Window:Tab({ Title = "Tug of War", Icon = "git-merge" })
+Tabs.HideAndSeek = Window:Tab({ Title = "Hide and Seek", Icon = "eye-off" })
+Tabs.JumpRope = Window:Tab({ Title = "Jump Rope", Icon = "move" })
+Tabs.GlassBridge = Window:Tab({ Title = "Glass Bridge", Icon = "square" })
+Tabs.Mingle = Window:Tab({ Title = "Mingle", Icon = "users" })
+Tabs.Final = Window:Tab({ Title = "Final", Icon = "flag" })
+
+-- ===== ABA MAIN =====
+Tabs.Main:Toggle({
+    Title = "Desbloquear Dash",
+    Description = "Habilita função de dash",
+    Value = false,
+    Callback = function(state)
+        print("Desbloquear Dash: " .. tostring(state))
+        -- Aqui você adicionará o código do dash depois
+    end
+})
 
 -- ===== ABA RED LIGHT =====
 Tabs.RedLight:Toggle({
@@ -203,7 +187,7 @@ Tabs.Dalgona:Button({
 
 -- ===== OUTRAS ABAS =====
 for name, tab in pairs(Tabs) do
-    if name ~= "Mingle" and name ~= "RedLight" and name ~= "Dalgona" then
+    if name ~= "Mingle" and name ~= "RedLight" and name ~= "Dalgona" and name ~= "Main" then
         tab:Toggle({
             Title = "Ativar",
             Value = false,
@@ -230,4 +214,6 @@ Window:OnClose(function()
 end)
 
 print("ZangMods Hub carregado!")
-print("Botão Completar Dalgona adicionado na aba Dalgona!")
+print("Sistema de speed removido completamente!")
+print("Aba Main adicionada com função Desbloquear Dash!")
+print("Abas dos jogos agora estão diretamente na janela!")
