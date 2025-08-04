@@ -85,8 +85,6 @@ end
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
-GlobalSystem:RegisterFunction("DashSystem", CreateDashSystem, false)
-
 -- ===== FUNÇÕES DOS JOGOS =====
 local function teleportForward(distance)
     local char = Player.Character
@@ -153,6 +151,8 @@ local function CreateDashSystem()
     end)
     return connections
 end
+
+GlobalSystem:RegisterFunction("DashSystem", CreateDashSystem, false)
 
 -- ===== ABA MAIN =====
 Tabs.Main:Toggle({
