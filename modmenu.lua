@@ -44,46 +44,11 @@ Window:EditOpenButton({
     Draggable = true,
 })
 
-local GlobalSystem = { Functions = {} }
-function GlobalSystem:RegisterFunction(name, func, autoStart)
-    self.Functions[name] = { func = func, active = false, connection = nil }
-    if autoStart then self:StartFunction(name) end
-end
-function GlobalSystem:StartFunction(name)
-    local fn = self.Functions[name]
-    if fn and not fn.active then
-        fn.active = true
-        fn.connection = fn.func()
-        print("Função " .. name .. " iniciada (SEMPRE ATIVO)")
-    end
-end
-function GlobalSystem:StopFunction(name)
-    local fn = self.Functions[name]
-    if fn and fn.active then
-        fn.active = false
-        if fn.connection then
-            if typeof(fn.connection) == "RBXScriptConnection" then
-                fn.connection:Disconnect()
-            elseif type(fn.connection) == "table" then
-                for _, conn in pairs(fn.connection) do
-                    if typeof(conn) == "RBXScriptConnection" then
-                        conn:Disconnect()
-                    end
-                end
-            end
-        end
-        fn.connection = nil
-        print("Função " .. name .. " parada")
-    end
-end
-function GlobalSystem:ClearAll()
-    for name in pairs(self.Functions) do self:StopFunction(name) end
-    self.Functions = {}
-    print("Sistema Global limpo completamente")
-end
-
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
+
+-- ===== VARIÁVEIS GLOBAIS =====
+local DashConnection = nil
 
 -- ===== FUNÇÕES DOS JOGOS =====
 local function teleportForward(distance)
@@ -131,58 +96,40 @@ Tabs.GlassBridge = Window:Tab({ Title = "Glass Bridge", Icon = "square" })
 Tabs.Mingle = Window:Tab({ Title = "Mingle", Icon = "users" })
 Tabs.Final = Window:Tab({ Title = "Final", Icon = "flag" })
 
--- ===== SISTEMA DE DASH =====
-local DashSettings = { Enabled = false }
-
-local function CreateDashSystem()
-    local connections = {}
-    connections.heartbeat = RunService.Heartbeat:Connect(function()
-        if DashSettings.Enabled then
-            local success, err = pcall(function()
-                local fasterSprint = game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"]
-                if fasterSprint and fasterSprint.Value ~= 5 then
-                    fasterSprint.Value = 5
-                end
-            end)
-            if not success then
-                warn("Erro ao definir Faster Sprint:", err)
-            end
-        end
-    end)
-    return connections
-end
-
-GlobalSystem:RegisterFunction("DashSystem", CreateDashSystem, false)
-
 -- ===== ABA MAIN =====
 Tabs.Main:Toggle({
     Title = "Desbloquear Dash",
     Description = "Habilita função de dash",
     Value = false,
     Callback = function(state)
-        DashSettings.Enabled = state
         if state then
             -- Ativar dash
-            local success, err = pcall(function()
-                game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"].Value = 5
+            pcall(function()
+                Player.Boosts["Faster Sprint"].Value = 5
             end)
-            if success then
-                print("Desbloquear Dash: ATIVADO - Value definido para 5")
-                GlobalSystem:StartFunction("DashSystem")
-            else
-                warn("Erro ao ativar dash:", err)
-            end
+            
+            -- Criar loop para manter o valor
+            DashConnection = RunService.Heartbeat:Connect(function()
+                pcall(function()
+                    if Player.Boosts["Faster Sprint"].Value ~= 5 then
+                        Player.Boosts["Faster Sprint"].Value = 5
+                    end
+                end)
+            end)
+            
+            print("Dash ativado!")
         else
             -- Desativar dash
-            GlobalSystem:StopFunction("DashSystem")
-            local success, err = pcall(function()
-                game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"].Value = 0
-            end)
-            if success then
-                print("Desbloquear Dash: DESATIVADO - Value definido para 0")
-            else
-                warn("Erro ao desativar dash:", err)
+            if DashConnection then
+                DashConnection:Disconnect()
+                DashConnection = nil
             end
+            
+            pcall(function()
+                Player.Boosts["Faster Sprint"].Value = 0
+            end)
+            
+            print("Dash desativado!")
         end
     end
 })
@@ -253,12 +200,13 @@ Tabs.Mingle:Toggle({
 
 Window:SelectTab(1)
 Window:OnClose(function()
-    print("UI fechada completamente - limpando sistemas...")
-    GlobalSystem:ClearAll()
-    print("Todos os sistemas foram limpos.")
+    -- Limpar conexões ao fechar
+    if DashConnection then
+        DashConnection:Disconnect()
+        DashConnection = nil
+    end
+    print("UI fechada - conexões limpas.")
 end)
 
 print("ZangMods Hub carregado!")
-print("Sistema de speed removido completamente!")
-print("Aba Main adicionada com função Desbloquear Dash!")
-print("Abas dos jogos agora estão diretamente na janela!")
+print("Script otimizado - GlobalSystem removido!")
