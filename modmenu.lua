@@ -1,13 +1,4 @@
--- Carregar WindUI com tratamento de erro
-local success, WindUI = pcall(function()
-    return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-end)
-
--- Verificar se WindUI foi carregado corretamente
-if not success or not WindUI then
-    error("Falha ao carregar WindUI: " .. tostring(WindUI))
-    return
-end
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 function gradient(text, startColor, endColor)
     local result = ""
@@ -109,6 +100,14 @@ local function CreateExitDoorsESP()
     print("ESP ExitDoors ativado para todos os andares!")
 end
 
+local function RemoveExitDoorsESP()
+    for _, highlight in pairs(EspHighlights) do
+        if highlight then highlight:Destroy() end
+    end
+    EspHighlights = {}
+    print("ESP ExitDoors desativado!")
+end
+
 local function CreateSafezone()
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -163,18 +162,6 @@ local function RemoveSafezone()
     SavedPosition = nil
 end
 
-local function RemoveExitDoorsESP()
-    for _, highlight in pairs(EspHighlights) do
-        if highlight then highlight:Destroy() end
-    end
-    EspHighlights = {}
-    print("ESP ExitDoors desativado!")
-end
-local Tabs = {}
-
--- ABA MAIN
-Tabs.Main = Window:Tab({ Title = "Main", Icon = "home" })
-
 local function CompleteDalgona()
     local DalgonaClientModule = game.ReplicatedStorage.Modules.Games.DalgonaClient
 
@@ -190,6 +177,14 @@ local function CompleteDalgona()
         end
     end
 end
+
+-- ===== INTERFACE - ABAS DIRETAS =====
+local Tabs = {}
+
+-- ABA MAIN
+Tabs.Main = Window:Tab({ Title = "Main", Icon = "home" })
+
+-- ABAS DOS JOGOS
 Tabs.RedLight = Window:Tab({ Title = "Red Light", Icon = "alert-octagon" })
 Tabs.Dalgona = Window:Tab({ Title = "Dalgona", Icon = "circle" })
 Tabs.TugOfWar = Window:Tab({ Title = "Tug of War", Icon = "git-merge" })
@@ -235,7 +230,26 @@ Tabs.Main:Toggle({
             print("Dash desativado!")
         end
     end
--- ===== INTERFACE - ABAS DIRETAS =====
+})
+
+Tabs.Main:Toggle({
+    Title = "Safezone",
+    Description = "Teleporta para área segura no céu",
+    Value = false,
+    Callback = function(state)
+        SafezoneEnabled = state
+        if state then
+            if not CreateSafezone() then
+                -- Se falhou, desativar o toggle
+                SafezoneEnabled = false
+            end
+        else
+            RemoveSafezone()
+        end
+    end
+})
+
+-- ===== ABA RED LIGHT =====
 Tabs.RedLight:Toggle({
     Title = "Ativar",
     Value = false,
@@ -278,19 +292,6 @@ Tabs.Dalgona:Button({
     end
 })
 
--- ===== OUTRAS ABAS =====
-for name, tab in pairs(Tabs) do
-    if name ~= "Mingle" and name ~= "RedLight" and name ~= "Dalgona" and name ~= "Main" and name ~= "HideAndSeek" then
-        tab:Toggle({
-            Title = "Ativar",
-            Value = false,
-            Callback = function(state)
-                print(name .. ": " .. tostring(state))
-            end
-        })
-    end
-end
-
 -- ===== ABA HIDE AND SEEK =====
 Tabs.HideAndSeek:Toggle({
     Title = "Esp ExitDoors",
@@ -312,6 +313,19 @@ Tabs.HideAndSeek:Toggle({
         print("Hide and Seek: " .. tostring(state))
     end
 })
+
+-- ===== OUTRAS ABAS =====
+for name, tab in pairs(Tabs) do
+    if name ~= "Mingle" and name ~= "RedLight" and name ~= "Dalgona" and name ~= "Main" and name ~= "HideAndSeek" then
+        tab:Toggle({
+            Title = "Ativar",
+            Value = false,
+            Callback = function(state)
+                print(name .. ": " .. tostring(state))
+            end
+        })
+    end
+end
 
 Tabs.Mingle:Toggle({
     Title = "Ativar",
