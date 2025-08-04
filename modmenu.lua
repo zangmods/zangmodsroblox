@@ -1,4 +1,13 @@
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+-- Carregar WindUI com tratamento de erro
+local success, WindUI = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+end)
+
+-- Verificar se WindUI foi carregado corretamente
+if not success or not WindUI then
+    error("Falha ao carregar WindUI: " .. tostring(WindUI))
+    return
+end
 
 function gradient(text, startColor, endColor)
     local result = ""
