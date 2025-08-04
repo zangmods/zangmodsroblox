@@ -51,6 +51,9 @@ local RunService = game:GetService("RunService")
 local DashConnection = nil
 local EspConnection = nil
 local EspHighlights = {}
+local SafezoneEnabled = false
+local SavedPosition = nil
+local SafezonePart = nil
 
 -- ===== FUNÇÕES DOS JOGOS =====
 local function teleportForward(distance)
@@ -97,6 +100,60 @@ local function CreateExitDoorsESP()
     print("ESP ExitDoors ativado para todos os andares!")
 end
 
+local function CreateSafezone()
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        warn("Erro: HumanoidRootPart não encontrado.")
+        return false
+    end
+    
+    -- Salvar posição atual
+    SavedPosition = hrp.CFrame
+    
+    -- Criar o chão de vidro
+    SafezonePart = Instance.new("Part")
+    SafezonePart.Name = "ZangMods"
+    SafezonePart.Size = Vector3.new(10, 1, 10)
+    SafezonePart.Material = Enum.Material.Glass
+    SafezonePart.BrickColor = BrickColor.new("Bright blue")
+    SafezonePart.Transparency = 0.3
+    SafezonePart.Anchored = true
+    SafezonePart.CanCollide = true
+    SafezonePart.Parent = workspace
+    
+    -- Posição bem alta (baseada na coordenada fixa + altura)
+    local safezonePosition = Vector3.new(-45.805057525634766, 1524.711669921875, 135.66622924804688) -- 500 blocos mais alto
+    SafezonePart.Position = safezonePosition
+    
+    -- Teleportar player para cima do chão
+    hrp.CFrame = CFrame.new(safezonePosition + Vector3.new(0, 5, 0))
+    
+    print("Safezone ativado! Teleportado para área segura.")
+    return true
+end
+
+local function RemoveSafezone()
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    -- Remover o chão de vidro
+    if SafezonePart then
+        SafezonePart:Destroy()
+        SafezonePart = nil
+    end
+    
+    -- Voltar para posição salva
+    if hrp and SavedPosition then
+        hrp.CFrame = SavedPosition
+        print("Safezone desativado! Voltou para posição original.")
+    else
+        warn("Erro: Não foi possível voltar para posição original.")
+    end
+    
+    SavedPosition = nil
+end
+
 local function RemoveExitDoorsESP()
     for _, highlight in pairs(EspHighlights) do
         if highlight then highlight:Destroy() end
@@ -104,6 +161,10 @@ local function RemoveExitDoorsESP()
     EspHighlights = {}
     print("ESP ExitDoors desativado!")
 end
+local Tabs = {}
+
+-- ABA MAIN
+Tabs.Main = Window:Tab({ Title = "Main", Icon = "home" })
 
 local function CompleteDalgona()
     local DalgonaClientModule = game.ReplicatedStorage.Modules.Games.DalgonaClient
@@ -120,12 +181,6 @@ local function CompleteDalgona()
         end
     end
 end
-local Tabs = {}
-
--- ABA MAIN
-Tabs.Main = Window:Tab({ Title = "Main", Icon = "home" })
-
--- ===== INTERFACE - ABAS DIRETAS =====
 Tabs.RedLight = Window:Tab({ Title = "Red Light", Icon = "alert-octagon" })
 Tabs.Dalgona = Window:Tab({ Title = "Dalgona", Icon = "circle" })
 Tabs.TugOfWar = Window:Tab({ Title = "Tug of War", Icon = "git-merge" })
@@ -171,9 +226,7 @@ Tabs.Main:Toggle({
             print("Dash desativado!")
         end
     end
-})
-
--- ===== ABA RED LIGHT =====
+-- ===== INTERFACE - ABAS DIRETAS =====
 Tabs.RedLight:Toggle({
     Title = "Ativar",
     Value = false,
@@ -261,16 +314,7 @@ Tabs.Mingle:Toggle({
 
 Window:SelectTab(1)
 Window:OnClose(function()
-    -- Limpar conexões ao fechar
-    if DashConnection then
-        DashConnection:Disconnect()
-        DashConnection = nil
-    end
-    
-    -- Limpar ESP highlights
-    RemoveExitDoorsESP()
-    
-    print("UI fechada - conexões limpas.")
+    print("UI fechada.")
 end)
 
 print("ZangMods Hub carregado!")
