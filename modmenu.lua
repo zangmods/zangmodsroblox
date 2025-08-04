@@ -314,7 +314,22 @@ Tabs.Mingle:Toggle({
 
 Window:SelectTab(1)
 Window:OnClose(function()
-    print("UI fechada.")
+    -- Limpar conexões ao fechar
+    if DashConnection then
+        DashConnection:Disconnect()
+        DashConnection = nil
+    end
+    
+    -- Limpar ESP highlights
+    RemoveExitDoorsESP()
+    
+    -- Limpar safezone se ativo
+    if SafezoneEnabled then
+        RemoveSafezone()
+        SafezoneEnabled = false
+    end
+    
+    print("UI fechada - conexões limpas.")
 end)
 
 print("ZangMods Hub carregado!")
