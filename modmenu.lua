@@ -85,6 +85,8 @@ end
 local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
+GlobalSystem:RegisterFunction("DashSystem", CreateDashSystem, false)
+
 -- ===== FUNÇÕES DOS JOGOS =====
 local function teleportForward(distance)
     local char = Player.Character
@@ -131,20 +133,56 @@ Tabs.GlassBridge = Window:Tab({ Title = "Glass Bridge", Icon = "square" })
 Tabs.Mingle = Window:Tab({ Title = "Mingle", Icon = "users" })
 Tabs.Final = Window:Tab({ Title = "Final", Icon = "flag" })
 
+-- ===== SISTEMA DE DASH =====
+local DashSettings = { Enabled = false }
+
+local function CreateDashSystem()
+    local connections = {}
+    connections.heartbeat = RunService.Heartbeat:Connect(function()
+        if DashSettings.Enabled then
+            local success, err = pcall(function()
+                local fasterSprint = game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"]
+                if fasterSprint and fasterSprint.Value ~= 5 then
+                    fasterSprint.Value = 5
+                end
+            end)
+            if not success then
+                warn("Erro ao definir Faster Sprint:", err)
+            end
+        end
+    end)
+    return connections
+end
+
 -- ===== ABA MAIN =====
 Tabs.Main:Toggle({
     Title = "Desbloquear Dash",
     Description = "Habilita função de dash",
     Value = false,
     Callback = function(state)
+        DashSettings.Enabled = state
         if state then
             -- Ativar dash
-            game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"].Value = 5
-            print("Desbloquear Dash: ATIVADO - Value definido para 5")
+            local success, err = pcall(function()
+                game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"].Value = 5
+            end)
+            if success then
+                print("Desbloquear Dash: ATIVADO - Value definido para 5")
+                GlobalSystem:StartFunction("DashSystem")
+            else
+                warn("Erro ao ativar dash:", err)
+            end
         else
-            -- Desativar dash (voltar ao valor padrão)
-            game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"].Value = 0
-            print("Desbloquear Dash: DESATIVADO - Value definido para 0")
+            -- Desativar dash
+            GlobalSystem:StopFunction("DashSystem")
+            local success, err = pcall(function()
+                game:GetService("Players").LocalPlayer.Boosts["Faster Sprint"].Value = 0
+            end)
+            if success then
+                print("Desbloquear Dash: DESATIVADO - Value definido para 0")
+            else
+                warn("Erro ao desativar dash:", err)
+            end
         end
     end
 })
