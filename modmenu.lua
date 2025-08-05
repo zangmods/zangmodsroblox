@@ -49,6 +49,8 @@ local RunService = game:GetService("RunService")
 
 -- ===== VARIÁVEIS GLOBAIS =====
 local EspHighlights = {}
+local TeamEspHighlights = {}
+local TeamEspConnection = nil
 
 -- ===== FUNÇÕES DOS JOGOS =====
 local function CreateExitDoorsESP()
@@ -87,6 +89,107 @@ local function RemoveExitDoorsESP()
     print("ESP ExitDoors desativado!")
 end
 
+local function TeleportToRedLightEnd()
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        pcall(function()
+            local safeZone = workspace.Map.RedLightGreenLight.SafeZone.Main
+            if safeZone then
+                local position = safeZone.Position
+                hrp.CFrame = CFrame.new(position.X, position.Y + 5, position.Z)
+                print("Teleportado para o fim do Red Light!")
+            else
+                warn("SafeZone não encontrada!")
+            end
+        end)
+    else
+        warn("Erro: HumanoidRootPart não encontrado.")
+    end
+end
+
+local function CreateTeamESP()
+    -- Limpar highlights existentes
+    for _, highlight in pairs(TeamEspHighlights) do
+        if highlight then highlight:Destroy() end
+    end
+    TeamEspHighlights = {}
+    
+    local function addHighlightToPlayer(player)
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local vestRed = player.Character:FindFirstChild("Vest_red")
+            local vestBlue = player.Character:FindFirstChild("Vest_blue")
+            
+            if vestRed or vestBlue then
+                local highlight = Instance.new("Highlight")
+                highlight.Parent = player.Character
+                highlight.Adornee = player.Character
+                highlight.FillTransparency = 0.5
+                highlight.OutlineTransparency = 0
+                
+                if vestRed then
+                    highlight.FillColor = Color3.fromRGB(255, 0, 0) -- Vermelho
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    print("ESP aplicado no jogador " .. player.Name .. " (Team Red)")
+                elseif vestBlue then
+                    highlight.FillColor = Color3.fromRGB(0, 0, 255) -- Azul
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    print("ESP aplicado no jogador " .. player.Name .. " (Team Blue)")
+                end
+                
+                table.insert(TeamEspHighlights, highlight)
+            end
+        end
+    end
+    
+    -- Aplicar ESP em todos os jogadores atuais
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= Player then
+            pcall(function()
+                addHighlightToPlayer(player)
+            end)
+        end
+    end
+    
+    -- Monitorar novos jogadores
+    TeamEspConnection = game.Players.PlayerAdded:Connect(function(player)
+        player.CharacterAdded:Connect(function()
+            wait(2) -- Aguardar o personagem carregar completamente
+            pcall(function()
+                addHighlightToPlayer(player)
+            end)
+        end)
+    end)
+    
+    print("ESP Teams ativado!")
+end
+
+local function RemoveTeamESP()
+    for _, highlight in pairs(TeamEspHighlights) do
+        if highlight then highlight:Destroy() end
+    end
+    TeamEspHighlights = {}
+    
+    if TeamEspConnection then
+        TeamEspConnection:Disconnect()
+        TeamEspConnection = nil
+    end
+    
+    print("ESP Teams desativado!")
+end
+
+local function RemoveJumpRope()
+    pcall(function()
+        local rope = workspace.Map.JumpRope.Rope
+        if rope then
+            rope:Destroy()
+            print("Jump Rope removida!")
+        else
+            warn("Rope não encontrada!")
+        end
+    end)
+end
+
 local Tabs = {}
 
 -- ABA MAIN
@@ -113,6 +216,14 @@ Tabs.Main:Toggle({
 })
 
 -- ===== ABA RED LIGHT =====
+Tabs.RedLight:Button({
+    Title = "Teleportar pro Fim",
+    Description = "Teleporta para cima da SafeZone",
+    Callback = function()
+        TeleportToRedLightEnd()
+    end
+})
+
 Tabs.RedLight:Toggle({
     Title = "Ativar",
     Value = false,
@@ -154,6 +265,19 @@ Tabs.HideAndSeek:Toggle({
 })
 
 Tabs.HideAndSeek:Toggle({
+    Title = "Esp Teams",
+    Description = "Mostra highlight nos jogadores com Vest_red (vermelho) e Vest_blue (azul)",
+    Value = false,
+    Callback = function(state)
+        if state then
+            CreateTeamESP()
+        else
+            RemoveTeamESP()
+        end
+    end
+})
+
+Tabs.HideAndSeek:Toggle({
     Title = "Ativar",
     Value = false,
     Callback = function(state)
@@ -162,6 +286,17 @@ Tabs.HideAndSeek:Toggle({
 })
 
 -- ===== ABA JUMP ROPE =====
+Tabs.JumpRope:Toggle({
+    Title = "Remove Rope",
+    Description = "Remove a corda do Jump Rope",
+    Value = false,
+    Callback = function(state)
+        if state then
+            RemoveJumpRope()
+        end
+    end
+})
+
 Tabs.JumpRope:Toggle({
     Title = "Ativar",
     Value = false,
@@ -201,6 +336,7 @@ Window:SelectTab(1)
 Window:OnClose(function()
     -- Limpar ESP highlights
     RemoveExitDoorsESP()
+    RemoveTeamESP()
     
     print("UI fechada.")
 end)
