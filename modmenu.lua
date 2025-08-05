@@ -48,24 +48,9 @@ local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
 -- ===== VARIÁVEIS GLOBAIS =====
-local DashConnection = nil
-local EspConnection = nil
 local EspHighlights = {}
 
 -- ===== FUNÇÕES DOS JOGOS =====
-local function teleportForward(distance)
-    local char = Player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        local pos, dir = hrp.Position, hrp.CFrame.LookVector
-        local newPos = pos + (dir * distance)
-        hrp.CFrame = CFrame.new(newPos, newPos + dir)
-        print("Teleportado " .. distance .. " passos à frente!")
-    else
-        print("Erro: Personagem não encontrado!")
-    end
-end
-
 local function CreateExitDoorsESP()
     -- Limpar highlights existentes
     for _, highlight in pairs(EspHighlights) do
@@ -74,27 +59,24 @@ local function CreateExitDoorsESP()
     EspHighlights = {}
     
     -- Criar highlights para as portas de saída
-    for floor = 1, 3 do
-        local floorPath = workspace.HideAndSeekMap.NEWFIXEDDOORS["Floor" .. floor].EXITDOORS
-        pcall(function()
-            local doors = floorPath:GetChildren()
-            for i, door in pairs(doors) do
-                if door and door:IsA("Model") or door:IsA("Part") then
-                    local highlight = Instance.new("Highlight")
-                    highlight.Parent = door
-                    highlight.FillColor = Color3.fromRGB(0, 255, 0) -- Verde
-                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Branco
-                    highlight.FillTransparency = 0.5
-                    highlight.OutlineTransparency = 0
-                    highlight.Adornee = door
-                    
-                    table.insert(EspHighlights, highlight)
-                    print("ESP aplicado na porta Floor" .. floor .. " - Porta " .. i)
-                end
+    pcall(function()
+        local exitDoors = workspace.Map.HideNSeek.Elements.ExitDoors:GetChildren()
+        for i, door in pairs(exitDoors) do
+            if door and (door:IsA("Model") or door:IsA("Part")) then
+                local highlight = Instance.new("Highlight")
+                highlight.Parent = door
+                highlight.FillColor = Color3.fromRGB(0, 255, 0) -- Verde
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Branco
+                highlight.FillTransparency = 0.5
+                highlight.OutlineTransparency = 0
+                highlight.Adornee = door
+                
+                table.insert(EspHighlights, highlight)
+                print("ESP aplicado na porta de saída " .. i)
             end
-        end)
-    end
-    print("ESP ExitDoors ativado para todos os andares!")
+        end
+    end)
+    print("ESP ExitDoors ativado!")
 end
 
 local function RemoveExitDoorsESP()
@@ -105,21 +87,6 @@ local function RemoveExitDoorsESP()
     print("ESP ExitDoors desativado!")
 end
 
-local function CompleteDalgona()
-    local DalgonaClientModule = game.ReplicatedStorage.Modules.Games.DalgonaClient
-
-    for _, Value in ipairs(getreg()) do
-        if typeof(Value) == "function" and islclosure(Value) then
-            if getfenv(Value).script == DalgonaClientModule then
-                if debug.getinfo(Value).nups == 73 then
-                    setupvalue(Value, 31, 9e9)  
-                    print("Dalgona completed!")
-                    break
-                end
-            end
-        end
-    end
-end
 local Tabs = {}
 
 -- ABA MAIN
@@ -137,39 +104,11 @@ Tabs.Final = Window:Tab({ Title = "Final", Icon = "flag" })
 
 -- ===== ABA MAIN =====
 Tabs.Main:Toggle({
-    Title = "Desbloquear Dash",
-    Description = "Habilita função de dash",
+    Title = "Ativar",
+    Description = "Toggle de exemplo",
     Value = false,
     Callback = function(state)
-        if state then
-            -- Ativar dash
-            pcall(function()
-                Player.Boosts["Faster Sprint"].Value = 5
-            end)
-            
-            -- Criar loop para manter o valor
-            DashConnection = RunService.Heartbeat:Connect(function()
-                pcall(function()
-                    if Player.Boosts["Faster Sprint"].Value ~= 5 then
-                        Player.Boosts["Faster Sprint"].Value = 5
-                    end
-                end)
-            end)
-            
-            print("Dash ativado!")
-        else
-            -- Desativar dash
-            if DashConnection then
-                DashConnection:Disconnect()
-                DashConnection = nil
-            end
-            
-            pcall(function()
-                Player.Boosts["Faster Sprint"].Value = 0
-            end)
-            
-            print("Dash desativado!")
-        end
+        print("Main: " .. tostring(state))
     end
 })
 
@@ -181,25 +120,6 @@ Tabs.RedLight:Toggle({
         print("Red Light: " .. tostring(state))
     end
 })
-Tabs.RedLight:Button({
-    Title = "Teleportar 500 Passos à Frente",
-    Callback = function()
-        teleportForward(500)
-    end
-})
-Tabs.RedLight:Button({
-    Title = "Teleportar para Coordenadas Fixas",
-    Callback = function()
-        local char = Player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.CFrame = CFrame.new(-45.805057525634766, 1024.711669921875, 135.66622924804688)
-            print("Teleportado para a posição fixa com sucesso!")
-        else
-            warn("Erro: HumanoidRootPart não encontrado.")
-        end
-    end
-})
 
 -- ===== ABA DALGONA =====
 Tabs.Dalgona:Toggle({
@@ -209,30 +129,20 @@ Tabs.Dalgona:Toggle({
         print("Dalgona: " .. tostring(state))
     end
 })
-Tabs.Dalgona:Button({
-    Title = "Completar Dalgona",
-    Callback = function()
-        CompleteDalgona()
+
+-- ===== ABA TUG OF WAR =====
+Tabs.TugOfWar:Toggle({
+    Title = "Ativar",
+    Value = false,
+    Callback = function(state)
+        print("Tug of War: " .. tostring(state))
     end
 })
-
--- ===== OUTRAS ABAS =====
-for name, tab in pairs(Tabs) do
-    if name ~= "Mingle" and name ~= "RedLight" and name ~= "Dalgona" and name ~= "Main" and name ~= "HideAndSeek" then
-        tab:Toggle({
-            Title = "Ativar",
-            Value = false,
-            Callback = function(state)
-                print(name .. ": " .. tostring(state))
-            end
-        })
-    end
-end
 
 -- ===== ABA HIDE AND SEEK =====
 Tabs.HideAndSeek:Toggle({
     Title = "Esp ExitDoors",
-    Description = "Mostra highlight nas portas de saída",
+    Description = "Mostra highlight verde nas portas de saída",
     Value = false,
     Callback = function(state)
         if state then
@@ -251,6 +161,25 @@ Tabs.HideAndSeek:Toggle({
     end
 })
 
+-- ===== ABA JUMP ROPE =====
+Tabs.JumpRope:Toggle({
+    Title = "Ativar",
+    Value = false,
+    Callback = function(state)
+        print("Jump Rope: " .. tostring(state))
+    end
+})
+
+-- ===== ABA GLASS BRIDGE =====
+Tabs.GlassBridge:Toggle({
+    Title = "Ativar",
+    Value = false,
+    Callback = function(state)
+        print("Glass Bridge: " .. tostring(state))
+    end
+})
+
+-- ===== ABA MINGLE =====
 Tabs.Mingle:Toggle({
     Title = "Ativar",
     Value = false,
@@ -259,19 +188,22 @@ Tabs.Mingle:Toggle({
     end
 })
 
+-- ===== ABA FINAL =====
+Tabs.Final:Toggle({
+    Title = "Ativar",
+    Value = false,
+    Callback = function(state)
+        print("Final: " .. tostring(state))
+    end
+})
+
 Window:SelectTab(1)
 Window:OnClose(function()
-    -- Limpar conexões ao fechar
-    if DashConnection then
-        DashConnection:Disconnect()
-        DashConnection = nil
-    end
-    
     -- Limpar ESP highlights
     RemoveExitDoorsESP()
     
-    print("UI fechada - conexões limpas.")
+    print("UI fechada.")
 end)
 
 print("ZangMods Hub carregado!")
-print("Script otimizado - GlobalSystem removido!")
+print("Script base limpo - Pronto para novo jogo!")
