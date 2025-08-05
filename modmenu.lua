@@ -437,11 +437,6 @@ Tabs.Final:Toggle({
 
 Window:SelectTab(1)
 Window:OnClose(function()
-    -- Limpar ESP highlights
-    RemoveExitDoorsESP()
-    RemoveTeamESP()
-    RemoveBabyESP()
-    
     print("UI fechada.")
 end)
 
