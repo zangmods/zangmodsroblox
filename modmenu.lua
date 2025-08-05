@@ -51,6 +51,8 @@ local RunService = game:GetService("RunService")
 local EspHighlights = {}
 local TeamEspHighlights = {}
 local TeamEspConnection = nil
+local BabyEspConnection = nil
+local BabyEspGuis = {}
 
 -- ===== FUNÇÕES DOS JOGOS =====
 local function CreateExitDoorsESP()
@@ -190,6 +192,94 @@ local function RemoveJumpRope()
     end)
 end
 
+local function CreateBabyESP()
+    -- Limpar ESPs existentes
+    for _, gui in pairs(BabyEspGuis) do
+        if gui then gui:Destroy() end
+    end
+    BabyEspGuis = {}
+    
+    local function addBabyESP(player)
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("BabyBack") then
+            -- Criar BillboardGui
+            local billboardGui = Instance.new("BillboardGui")
+            billboardGui.Parent = player.Character.HumanoidRootPart
+            billboardGui.Size = UDim2.new(0, 100, 0, 50)
+            billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+            billboardGui.AlwaysOnTop = true
+            
+            -- Criar TextLabel
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Parent = billboardGui
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.Text = "BABY"
+            textLabel.TextColor3 = Color3.fromRGB(255, 255, 0) -- Amarelo
+            textLabel.TextScaled = true
+            textLabel.TextStrokeTransparency = 0
+            textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Contorno preto
+            textLabel.Font = Enum.Font.SourceSansBold
+            
+            table.insert(BabyEspGuis, billboardGui)
+            print("ESP Baby aplicado no jogador " .. player.Name)
+        end
+    end
+    
+    -- Verificar todos os jogadores atuais
+    for _, player in pairs(game.Players:GetPlayers()) do
+        pcall(function()
+            addBabyESP(player)
+        end)
+    end
+    
+    -- Monitorar mudanças nos jogadores
+    BabyEspConnection = RunService.Heartbeat:Connect(function()
+        -- Limpar ESPs antigos
+        for i = #BabyEspGuis, 1, -1 do
+            local gui = BabyEspGuis[i]
+            if not gui or not gui.Parent or not gui.Parent.Parent or not gui.Parent.Parent:FindFirstChild("BabyBack") then
+                if gui then gui:Destroy() end
+                table.remove(BabyEspGuis, i)
+            end
+        end
+        
+        -- Adicionar novos ESPs
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild("BabyBack") then
+                local hasESP = false
+                for _, gui in pairs(BabyEspGuis) do
+                    if gui and gui.Parent and gui.Parent.Parent == player.Character then
+                        hasESP = true
+                        break
+                    end
+                end
+                
+                if not hasESP then
+                    pcall(function()
+                        addBabyESP(player)
+                    end)
+                end
+            end
+        end
+    end)
+    
+    print("ESP Baby ativado!")
+end
+
+local function RemoveBabyESP()
+    for _, gui in pairs(BabyEspGuis) do
+        if gui then gui:Destroy() end
+    end
+    BabyEspGuis = {}
+    
+    if BabyEspConnection then
+        BabyEspConnection:Disconnect()
+        BabyEspConnection = nil
+    end
+    
+    print("ESP Baby desativado!")
+end
+
 local Tabs = {}
 
 -- ABA MAIN
@@ -206,6 +296,19 @@ Tabs.Mingle = Window:Tab({ Title = "Mingle", Icon = "users" })
 Tabs.Final = Window:Tab({ Title = "Final", Icon = "flag" })
 
 -- ===== ABA MAIN =====
+Tabs.Main:Toggle({
+    Title = "Esp Baby",
+    Description = "Mostra texto 'BABY' em cima do jogador que tem BabyBack",
+    Value = false,
+    Callback = function(state)
+        if state then
+            CreateBabyESP()
+        else
+            RemoveBabyESP()
+        end
+    end
+})
+
 Tabs.Main:Toggle({
     Title = "Ativar",
     Description = "Toggle de exemplo",
@@ -337,6 +440,7 @@ Window:OnClose(function()
     -- Limpar ESP highlights
     RemoveExitDoorsESP()
     RemoveTeamESP()
+    RemoveBabyESP()
     
     print("UI fechada.")
 end)
