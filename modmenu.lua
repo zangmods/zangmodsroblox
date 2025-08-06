@@ -58,6 +58,7 @@ local SafeZonePart = nil
 local OriginalPosition = nil
 local KillAuraConnection = nil
 local KillAuraTarget = nil
+local KillAuraClickConnection = nil
 
 -- ===== FUNÇÕES DOS JOGOS =====
 local function CreateExitDoorsESP()
@@ -509,6 +510,7 @@ local function RemoveSafeZone()
     OriginalPosition = nil
 end
 
+-- ===== KILL AURA MELHORADO =====
 local function StartKillAura()
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -530,7 +532,7 @@ local function StartKillAura()
         return
     end
     
-    -- Encontrar jogador inimigo mais próximo
+    -- Encontrar jogador inimigo mais próximo (independente da distância)
     local function findNearestEnemy()
         local nearestEnemy = nil
         local shortestDistance = math.huge
@@ -559,7 +561,23 @@ local function StartKillAura()
         return nearestEnemy
     end
     
-    -- Selecionar alvo inimigo
+    -- Sistema de auto click
+    local function autoClick()
+        if game:GetService("UserInputService").TouchEnabled then
+            -- Para dispositivos móveis
+            local virtualInputManager = game:GetService("VirtualInputManager")
+            virtualInputManager:SendMouseButtonEvent(400, 300, 0, true, game, 0)
+            wait(0.01)
+            virtualInputManager:SendMouseButtonEvent(400, 300, 0, false, game, 0)
+        else
+            -- Para PC
+            mouse1press()
+            wait(0.01)
+            mouse1release()
+        end
+    end
+    
+    -- Selecionar primeiro alvo
     KillAuraTarget = findNearestEnemy()
     if not KillAuraTarget then
         warn("Nenhum jogador inimigo encontrado!")
@@ -569,7 +587,17 @@ local function StartKillAura()
     local enemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
     print("Kill Aura ativado - Alvo: " .. KillAuraTarget.Name .. " (Team " .. enemyTeam .. ")")
     
-    -- Loop de ataque - grudar no alvo inimigo
+    -- Sistema de clique automático
+    KillAuraClickConnection = RunService.Heartbeat:Connect(function()
+        if KillAuraTarget and KillAuraTarget.Character and KillAuraTarget.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHumanoid = KillAuraTarget.Character:FindFirstChild("Humanoid")
+            if targetHumanoid and targetHumanoid.Health > 0 then
+                autoClick()
+            end
+        end
+    end)
+    
+    -- Loop principal de teleport e controle de alvos
     KillAuraConnection = RunService.Heartbeat:Connect(function()
         -- Verificar se ainda estou no mesmo time
         local currentMyTeam = nil
@@ -592,18 +620,30 @@ local function StartKillAura()
             
             -- Verificar se o alvo ainda está vivo
             if not targetHumanoid or targetHumanoid.Health <= 0 then
-                print("Alvo " .. KillAuraTarget.Name .. " foi eliminado! Procurando novo inimigo...")
+                print("Alvo " .. KillAuraTarget.Name .. " foi eliminado! Procurando novo inimigo IMEDIATAMENTE...")
+                
+                -- Procurar próximo alvo instantaneamente
                 KillAuraTarget = findNearestEnemy()
-                if not KillAuraTarget then
+                if KillAuraTarget then
+                    local newEnemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
+                    print("NOVO ALVO ENCONTRADO: " .. KillAuraTarget.Name .. " (Team " .. newEnemyTeam .. ")")
+                    
+                    -- Teleportar IMEDIATAMENTE para o novo alvo
+                    local newTargetHrp = KillAuraTarget.Character.HumanoidRootPart
+                    local offset = Vector3.new(
+                        math.random(-2, 2),
+                        0.5,
+                        math.random(-2, 2)
+                    )
+                    hrp.CFrame = CFrame.new(newTargetHrp.Position + offset, newTargetHrp.Position)
+                    print("TELEPORTADO PARA NOVO ALVO!")
+                else
                     print("Nenhum inimigo restante! Kill Aura pausado.")
-                    return
                 end
-                local newEnemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
-                print("Novo alvo: " .. KillAuraTarget.Name .. " (Team " .. newEnemyTeam .. ")")
                 return
             end
             
-            -- Grudar no alvo inimigo
+            -- Teleportar para o alvo atual (independente da distância)
             local offset = Vector3.new(
                 math.random(-2, 2),
                 0.5,
@@ -613,10 +653,22 @@ local function StartKillAura()
             hrp.CFrame = CFrame.new(targetHrp.Position + offset, targetHrp.Position)
             
         else
-            -- Alvo perdido, procurar novo inimigo
+            -- Alvo perdido, procurar novo inimigo imediatamente
             print("Alvo perdido! Procurando novo inimigo...")
             KillAuraTarget = findNearestEnemy()
-            if not KillAuraTarget then
+            if KillAuraTarget then
+                local newEnemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
+                print("Novo alvo encontrado: " .. KillAuraTarget.Name .. " (Team " .. newEnemyTeam .. ")")
+                
+                -- Teleportar imediatamente
+                local newTargetHrp = KillAuraTarget.Character.HumanoidRootPart
+                local offset = Vector3.new(
+                    math.random(-2, 2),
+                    0.5,
+                    math.random(-2, 2)
+                )
+                hrp.CFrame = CFrame.new(newTargetHrp.Position + offset, newTargetHrp.Position)
+            else
                 print("Nenhum inimigo disponível!")
             end
         end
@@ -627,6 +679,11 @@ local function StopKillAura()
     if KillAuraConnection then
         KillAuraConnection:Disconnect()
         KillAuraConnection = nil
+    end
+    
+    if KillAuraClickConnection then
+        KillAuraClickConnection:Disconnect()
+        KillAuraClickConnection = nil
     end
     
     if KillAuraTarget then
@@ -765,7 +822,7 @@ Tabs.HideAndSeek:Toggle({
 
 Tabs.HideAndSeek:Toggle({
     Title = "Kill Aura",
-    Description = "Gruda apenas em inimigos do time oposto (detecta automaticamente)",
+    Description = "Auto-teleporta e ataca inimigos automaticamente - Melhorado!",
     Value = false,
     Callback = function(state)
         if state then
