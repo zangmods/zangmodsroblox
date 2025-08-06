@@ -516,132 +516,114 @@ end
 local function StartFling()
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then
-        warn("HumanoidRootPart não encontrado!")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not humanoid then
+        warn("HumanoidRootPart ou Humanoid não encontrado!")
         return
     end
-    
+
     FlingEnabled = true
     print("🚀 Fling Players ativado! Encoste nos jogadores para jogá-los longe!")
-    
-    -- Modificar suas propriedades para causar fling real no servidor
-    local function setupFlingBody()
-        -- Aumentar massivamente a velocidade e força do seu HumanoidRootPart
-        if hrp and hrp:FindFirstChildOfClass("BodyVelocity") then
-            hrp:FindFirstChildOfClass("BodyVelocity"):Destroy()
-        end
-        
-        local bodyVel = Instance.new("BodyVelocity")
-        bodyVel.MaxForce = Vector3.new(math.huge, 0, math.huge)
-        bodyVel.Velocity = Vector3.new(0, 0, 0)
-        bodyVel.Parent = hrp
-        
-        -- Criar BodyPosition para controle
-        local bodyPos = Instance.new("BodyPosition")
-        bodyPos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bodyPos.Position = hrp.Position
-        bodyPos.D = 1000
-        bodyPos.P = 10000
-        bodyPos.Parent = hrp
-        
-        return bodyVel, bodyPos
-    end
-    
-    local bodyVel, bodyPos = setupFlingBody()
-    
-    -- Sistema de fling usando RunService para movimento contínuo
+
+    -- Método "detached part" para Fling REAL server-side
+    -- Cria uma part invisível, MASSIVA, Weldada no seu HRP, e gira ela rapidamente para empurrar fisicamente os outros players
+    local FlingPart = Instance.new("Part")
+    FlingPart.Name = "ZangFlingPart"
+    FlingPart.Size = Vector3.new(7, 7, 7)
+    FlingPart.Transparency = 1
+    FlingPart.Anchored = false
+    FlingPart.CanCollide = true
+    FlingPart.CanQuery = false
+    FlingPart.CanTouch = true
+    FlingPart.Massless = false
+    FlingPart.Parent = workspace
+    FlingPart.Position = hrp.Position + Vector3.new(0, 4, 0)
+    FlingPart.Velocity = Vector3.new(0,0,0)
+
+    -- Weld (Attachment) para seguir o HRP
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = hrp
+    weld.Part1 = FlingPart
+    weld.Parent = FlingPart
+
+    -- Torna a parte super pesada para garantir força (impede anticheat de te "prender", pois o HRP é o master)
+    FlingPart.CustomPhysicalProperties = PhysicalProperties.new(100000,0.3,0.5)
+
+    -- Rotação rápida para causar Fling físico real
+    local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
+    BodyAngularVelocity.MaxTorque = Vector3.new(1e7, 1e7, 1e7)
+    BodyAngularVelocity.AngularVelocity = Vector3.new(0, 50, 0) -- Vira MUITO RÁPIDO
+    BodyAngularVelocity.P = 1e6
+    BodyAngularVelocity.Parent = FlingPart
+
+    -- Desativa PlatformStand (anti freeze)
+    humanoid.PlatformStand = false
+    hrp.Anchored = false
+
+    -- Se morrer ou respawnar, limpa
+    local diedConn, charConn
+    diedConn = humanoid.Died:Connect(function()
+        StopFling()
+    end)
+    charConn = Player.CharacterAdded:Connect(function()
+        StopFling()
+    end)
+
+    -- Protege contra freeze do anticheat (seta a velocidade do HRP para normal)
+    local lastTick = tick()
     FlingConnection = RunService.Heartbeat:Connect(function()
-        if not FlingEnabled or not char or not hrp then return end
-        
-        -- Manter corpo estável quando não está flingando
-        if bodyPos then
-            bodyPos.Position = hrp.Position
-        end
-        
-        -- Detectar jogadores próximos para fling
-        for _, otherPlayer in pairs(game.Players:GetPlayers()) do
-            if otherPlayer ~= Player and otherPlayer.Character then
-                local otherHrp = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local otherHumanoid = otherPlayer.Character:FindFirstChild("Humanoid")
-                
-                if otherHrp and otherHumanoid and otherHumanoid.Health > 0 then
-                    local distance = (hrp.Position - otherHrp.Position).Magnitude
-                    
-                    -- Se estiver muito próximo (encostando)
-                    if distance < 7 then
-                        -- Aplicar força extrema para causar fling real
-                        local direction = (otherHrp.Position - hrp.Position).Unit
-                        
-                        -- Método 1: Modificar velocidade diretamente
-                        pcall(function()
-                            otherHrp.Velocity = direction * 100 + Vector3.new(0, 50, 0)
-                            otherHrp.AssemblyLinearVelocity = direction * 100 + Vector3.new(0, 50, 0)
-                        end)
-                        
-                        -- Método 2: Usar BodyVelocity mais agressivo
-                        pcall(function()
-                            -- Remover qualquer BodyVelocity existente do alvo
-                            for _, obj in pairs(otherHrp:GetChildren()) do
-                                if obj:IsA("BodyVelocity") or obj:IsA("BodyPosition") then
-                                    obj:Destroy()
-                                end
-                            end
-                            
-                            -- Criar novo BodyVelocity mais forte
-                            local targetBodyVel = Instance.new("BodyVelocity")
-                            targetBodyVel.MaxForce = Vector3.new(50000, 50000, 50000)
-                            targetBodyVel.Velocity = direction * 80 + Vector3.new(0, 40, 0)
-                            targetBodyVel.Parent = otherHrp
-                            
-                            -- Remover após um tempo
-                            game:GetService("Debris"):AddItem(targetBodyVel, 0.5)
-                        end)
-                        
-                        -- Método 3: CFrame manipulation para garantir movimento
-                        pcall(function()
-                            local flingCFrame = otherHrp.CFrame + direction * 10
-                            otherHrp.CFrame = flingCFrame
-                        end)
-                        
-                        print("💥 " .. otherPlayer.Name .. " foi flingado! (Distância: " .. math.floor(distance) .. ")")
-                        
-                        -- Cooldown para não spam fling no mesmo jogador
-                        wait(0.1)
-                    end
-                end
-            end
-        end
-    end)
-    
-    -- Limpar quando personagem morre/respawna
-    char.AncestryChanged:Connect(function()
-        if not char.Parent then
+        if not FlingEnabled or not char or not char:IsDescendantOf(workspace) or not hrp or not humanoid then return end
+        humanoid.PlatformStand = false
+        hrp.Anchored = false
+        -- Garante que a parte está Weldada e perto do HRP
+        if not FlingPart or not FlingPart.Parent then
             StopFling()
+            return
+        end
+        FlingPart.Position = hrp.Position + Vector3.new(0, 4, 0)
+        -- Reseta velocidade do HRP caso tente prender
+        hrp.Velocity = Vector3.new(0,0,0)
+        hrp.RotVelocity = Vector3.new(0,0,0)
+        -- Pequeno pulo a cada 2seg (anti stuck)
+        if tick() - lastTick > 2 then
+            hrp.Velocity = Vector3.new(0, 40, 0)
+            lastTick = tick()
         end
     end)
+
+    -- Limpa tudo ao chamar StopFling
+    function StopFling()
+        FlingEnabled = false
+        if FlingConnection then FlingConnection:Disconnect() FlingConnection = nil end
+        if FlingPart and FlingPart.Parent then pcall(function() FlingPart:Destroy() end) end
+        if weld then pcall(function() weld:Destroy() end) end
+        if BodyAngularVelocity then pcall(function() BodyAngularVelocity:Destroy() end) end
+        if diedConn then diedConn:Disconnect() end
+        if charConn then charConn:Disconnect() end
+        print("❌ Fling Players desativado!")
+    end
 end
 
-local function StopFling()
+function StopFling()
     FlingEnabled = false
-    
-    if FlingConnection then
-        FlingConnection:Disconnect()
-        FlingConnection = nil
-    end
-    
-    -- Limpar BodyVelocity e BodyPosition do jogador
+    if FlingConnection then FlingConnection:Disconnect() FlingConnection = nil end
+    -- Remove qualquer Part/Weld/AngularVelocity deixado para trás
     local char = Player.Character
     if char then
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if hrp then
+            for _, obj in pairs(workspace:GetChildren()) do
+                if obj:IsA("Part") and obj.Name == "ZangFlingPart" then
+                    pcall(function() obj:Destroy() end)
+                end
+            end
             for _, obj in pairs(hrp:GetChildren()) do
-                if obj:IsA("BodyVelocity") or obj:IsA("BodyPosition") then
-                    obj:Destroy()
+                if obj:IsA("BodyVelocity") or obj:IsA("BodyPosition") or obj:IsA("BodyAngularVelocity") then
+                    pcall(function() obj:Destroy() end)
                 end
             end
         end
     end
-    
     print("❌ Fling Players desativado!")
 end
 
