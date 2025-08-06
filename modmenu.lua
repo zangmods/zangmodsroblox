@@ -53,6 +53,7 @@ local TeamEspHighlights = {}
 local TeamEspConnection = nil
 local BabyEspConnection = nil
 local BabyEspGuis = {}
+local GlassEspHighlights = {}
 
 -- ===== FUNÇÕES DOS JOGOS =====
 local function CreateExitDoorsESP()
@@ -280,6 +281,81 @@ local function RemoveBabyESP()
     print("ESP Baby desativado!")
 end
 
+local function CreateGlassESP()
+    -- Limpar highlights existentes
+    for _, highlight in pairs(GlassEspHighlights) do
+        if highlight then highlight:Destroy() end
+    end
+    GlassEspHighlights = {}
+    
+    pcall(function()
+        local glassFolder = workspace.Map.Glass.Glasses
+        local glasses = glassFolder:GetChildren()
+        
+        for _, glass in pairs(glasses) do
+            if glass:IsA("Model") or glass:IsA("Folder") then
+                -- Procurar por partes do vidro dentro do modelo/pasta
+                local glassParts = glass:GetChildren()
+                for _, part in pairs(glassParts) do
+                    if part:IsA("BasePart") then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Parent = part
+                        highlight.Adornee = part
+                        highlight.FillTransparency = 0.3
+                        highlight.OutlineTransparency = 0
+                        
+                        -- Verificar propriedades para determinar se é seguro
+                        -- Vidros seguros geralmente têm CanCollide = true
+                        -- Vidros falsos podem ter CanCollide = false ou outras propriedades diferentes
+                        if part.CanCollide == true and part.Transparency < 1 then
+                            -- Vidro seguro - verde
+                            highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            print("Vidro seguro detectado: " .. glass.Name)
+                        else
+                            -- Vidro perigoso - vermelho
+                            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            print("Vidro perigoso detectado: " .. glass.Name)
+                        end
+                        
+                        table.insert(GlassEspHighlights, highlight)
+                    end
+                end
+            elseif glass:IsA("BasePart") then
+                -- Se for uma parte direta
+                local highlight = Instance.new("Highlight")
+                highlight.Parent = glass
+                highlight.Adornee = glass
+                highlight.FillTransparency = 0.3
+                highlight.OutlineTransparency = 0
+                
+                if glass.CanCollide == true and glass.Transparency < 1 then
+                    highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    print("Vidro seguro detectado: " .. glass.Name)
+                else
+                    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    print("Vidro perigoso detectado: " .. glass.Name)
+                end
+                
+                table.insert(GlassEspHighlights, highlight)
+            end
+        end
+    end)
+    
+    print("ESP Glass ativado! Verde = Seguro, Vermelho = Perigoso")
+end
+
+local function RemoveGlassESP()
+    for _, highlight in pairs(GlassEspHighlights) do
+        if highlight then highlight:Destroy() end
+    end
+    GlassEspHighlights = {}
+    print("ESP Glass desativado!")
+end
+
 local Tabs = {}
 
 -- ABA MAIN
@@ -409,6 +485,19 @@ Tabs.JumpRope:Toggle({
 })
 
 -- ===== ABA GLASS BRIDGE =====
+Tabs.GlassBridge:Toggle({
+    Title = "Esp Glass",
+    Description = "Mostra vidros seguros (verde) e perigosos (vermelho)",
+    Value = false,
+    Callback = function(state)
+        if state then
+            CreateGlassESP()
+        else
+            RemoveGlassESP()
+        end
+    end
+})
+
 Tabs.GlassBridge:Toggle({
     Title = "Ativar",
     Value = false,
