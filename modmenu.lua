@@ -54,6 +54,10 @@ local TeamEspConnection = nil
 local BabyEspConnection = nil
 local BabyEspGuis = {}
 local GlassEspHighlights = {}
+local SafeZonePart = nil
+local OriginalPosition = nil
+local KillAuraConnection = nil
+local KillAuraTarget = nil
 
 -- ===== FUNÇÕES DOS JOGOS =====
 local function CreateExitDoorsESP()
@@ -377,12 +381,12 @@ local function EnlargeHoneycombParts()
                             part:SetAttribute("OriginalSizeZ", part.Size.Z)
                         end
                         
-                        -- Aumentar mais para pegar vários pontos com um clique (multiplicar por 8x)
+                        -- Aumentar moderadamente para facilitar o clique (multiplicar por 3x)
                         local currentSize = part.Size
                         part.Size = Vector3.new(
-                            currentSize.X * 8,  -- X aumenta 8x
-                            currentSize.Y * 8,  -- Y aumenta 8x  
-                            currentSize.Z * 8   -- Z aumenta 8x
+                            currentSize.X * 3,  -- X aumenta 3x
+                            currentSize.Y * 3,  -- Y aumenta 3x  
+                            currentSize.Z * 3   -- Z aumenta 3x
                         )
                         
                         print("Part " .. i .. ": " .. 
@@ -437,6 +441,202 @@ local function RestoreHoneycombParts()
     end)
 end
 
+local function CreateSafeZone()
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        warn("HumanoidRootPart não encontrado!")
+        return
+    end
+    
+    -- Salvar posição original
+    OriginalPosition = hrp.CFrame
+    
+    pcall(function()
+        -- Criar parte do Safe Zone bem alto
+        SafeZonePart = Instance.new("Part")
+        SafeZonePart.Name = "ZangModsSafeZone"
+        SafeZonePart.Size = Vector3.new(10, 1, 10)
+        SafeZonePart.Position = Vector3.new(0, 2000, 0) -- Bem alto no céu
+        SafeZonePart.Anchored = true
+        SafeZonePart.CanCollide = true
+        SafeZonePart.CanQuery = false
+        SafeZonePart.Material = Enum.Material.ForceField
+        SafeZonePart.BrickColor = BrickColor.new("Bright blue")
+        SafeZonePart.Transparency = 0.3
+        SafeZonePart.Parent = workspace
+        
+        -- Criar texto "ZangMods" na parte
+        local surfaceGui = Instance.new("SurfaceGui")
+        surfaceGui.Parent = SafeZonePart
+        surfaceGui.Face = Enum.NormalId.Top
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Parent = surfaceGui
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = "ZangMods"
+        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel.TextScaled = true
+        textLabel.TextStrokeTransparency = 0
+        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel.Font = Enum.Font.SourceSansBold
+        
+        -- Teleportar para o Safe Zone
+        hrp.CFrame = CFrame.new(SafeZonePart.Position + Vector3.new(0, 5, 0))
+        
+        print("Safe Zone criado! Você está seguro no ZangMods Safe Zone!")
+    end)
+end
+
+local function RemoveSafeZone()
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    -- Teleportar de volta para posição original
+    if hrp and OriginalPosition then
+        hrp.CFrame = OriginalPosition
+        print("Voltou para a posição original!")
+    end
+    
+    -- Remover parte do Safe Zone
+    if SafeZonePart then
+        SafeZonePart:Destroy()
+        SafeZonePart = nil
+        print("Safe Zone removido!")
+    end
+    
+    OriginalPosition = nil
+end
+
+local function StartKillAura()
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        warn("HumanoidRootPart não encontrado!")
+        return
+    end
+    
+    -- Detectar meu time
+    local myTeam = nil
+    if char:FindFirstChild("Vest_red") then
+        myTeam = "red"
+        print("Você é do time VERMELHO - atacando jogadores AZUIS")
+    elseif char:FindFirstChild("Vest_blue") then
+        myTeam = "blue"
+        print("Você é do time AZUL - atacando jogadores VERMELHOS")
+    else
+        warn("Você não está em nenhum time! Kill Aura cancelado.")
+        return
+    end
+    
+    -- Encontrar jogador inimigo mais próximo
+    local function findNearestEnemy()
+        local nearestEnemy = nil
+        local shortestDistance = math.huge
+        
+        for _, player in pairs(game.Players:GetPlayers()) do
+            if player ~= Player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local isEnemy = false
+                
+                -- Verificar se é inimigo baseado no meu time
+                if myTeam == "red" and player.Character:FindFirstChild("Vest_blue") then
+                    isEnemy = true -- Sou vermelho, ele é azul = inimigo
+                elseif myTeam == "blue" and player.Character:FindFirstChild("Vest_red") then
+                    isEnemy = true -- Sou azul, ele é vermelho = inimigo
+                end
+                
+                if isEnemy then
+                    local distance = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        nearestEnemy = player
+                    end
+                end
+            end
+        end
+        
+        return nearestEnemy
+    end
+    
+    -- Selecionar alvo inimigo
+    KillAuraTarget = findNearestEnemy()
+    if not KillAuraTarget then
+        warn("Nenhum jogador inimigo encontrado!")
+        return
+    end
+    
+    local enemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
+    print("Kill Aura ativado - Alvo: " .. KillAuraTarget.Name .. " (Team " .. enemyTeam .. ")")
+    
+    -- Loop de ataque - grudar no alvo inimigo
+    KillAuraConnection = RunService.Heartbeat:Connect(function()
+        -- Verificar se ainda estou no mesmo time
+        local currentMyTeam = nil
+        if char:FindFirstChild("Vest_red") then
+            currentMyTeam = "red"
+        elseif char:FindFirstChild("Vest_blue") then
+            currentMyTeam = "blue"
+        end
+        
+        if currentMyTeam ~= myTeam then
+            print("Mudança de time detectada! Reiniciando Kill Aura...")
+            StopKillAura()
+            StartKillAura()
+            return
+        end
+        
+        if KillAuraTarget and KillAuraTarget.Character and KillAuraTarget.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHrp = KillAuraTarget.Character.HumanoidRootPart
+            local targetHumanoid = KillAuraTarget.Character:FindFirstChild("Humanoid")
+            
+            -- Verificar se o alvo ainda está vivo
+            if not targetHumanoid or targetHumanoid.Health <= 0 then
+                print("Alvo " .. KillAuraTarget.Name .. " foi eliminado! Procurando novo inimigo...")
+                KillAuraTarget = findNearestEnemy()
+                if not KillAuraTarget then
+                    print("Nenhum inimigo restante! Kill Aura pausado.")
+                    return
+                end
+                local newEnemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
+                print("Novo alvo: " .. KillAuraTarget.Name .. " (Team " .. newEnemyTeam .. ")")
+                return
+            end
+            
+            -- Grudar no alvo inimigo
+            local offset = Vector3.new(
+                math.random(-2, 2),
+                0.5,
+                math.random(-2, 2)
+            )
+            
+            hrp.CFrame = CFrame.new(targetHrp.Position + offset, targetHrp.Position)
+            
+        else
+            -- Alvo perdido, procurar novo inimigo
+            print("Alvo perdido! Procurando novo inimigo...")
+            KillAuraTarget = findNearestEnemy()
+            if not KillAuraTarget then
+                print("Nenhum inimigo disponível!")
+            end
+        end
+    end)
+end
+
+local function StopKillAura()
+    if KillAuraConnection then
+        KillAuraConnection:Disconnect()
+        KillAuraConnection = nil
+    end
+    
+    if KillAuraTarget then
+        print("Kill Aura desativado - Alvo: " .. KillAuraTarget.Name .. " liberado!")
+        KillAuraTarget = nil
+    else
+        print("Kill Aura desativado!")
+    end
+end
+
 local Tabs = {}
 
 -- ABA MAIN
@@ -462,6 +662,19 @@ Tabs.Main:Toggle({
             CreateBabyESP()
         else
             RemoveBabyESP()
+        end
+    end
+})
+
+Tabs.Main:Toggle({
+    Title = "Safe Zone",
+    Description = "Teleporta para zona segura no céu com plataforma ZangMods",
+    Value = false,
+    Callback = function(state)
+        if state then
+            CreateSafeZone()
+        else
+            RemoveSafeZone()
         end
     end
 })
@@ -494,8 +707,8 @@ Tabs.RedLight:Toggle({
 
 -- ===== ABA DALGONA =====
 Tabs.Dalgona:Toggle({
-    Title = "Enlarge Parts",
-    Description = "Aumenta as parts (8x) quando ativado, restaura quando desativado",
+    Title = "Dalgona Helper",
+    Description = "Aumenta as parts (3x) quando ativado, restaura quando desativado",
     Value = false,
     Callback = function(state)
         if state then
@@ -546,6 +759,19 @@ Tabs.HideAndSeek:Toggle({
             CreateTeamESP()
         else
             RemoveTeamESP()
+        end
+    end
+})
+
+Tabs.HideAndSeek:Toggle({
+    Title = "Kill Aura",
+    Description = "Gruda apenas em inimigos do time oposto (detecta automaticamente)",
+    Value = false,
+    Callback = function(state)
+        if state then
+            StartKillAura()
+        else
+            StopKillAura()
         end
     end
 })
