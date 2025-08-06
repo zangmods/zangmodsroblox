@@ -59,6 +59,8 @@ local OriginalPosition = nil
 local KillAuraConnection = nil
 local KillAuraTarget = nil
 local KillAuraClickConnection = nil
+local FlingConnection = nil
+local FlingEnabled = false
 
 -- ===== FUNÇÕES DOS JOGOS =====
 local function CreateExitDoorsESP()
@@ -510,6 +512,109 @@ local function RemoveSafeZone()
     OriginalPosition = nil
 end
 
+-- ===== FLING PLAYERS =====
+local function StartFling()
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        warn("HumanoidRootPart não encontrado!")
+        return
+    end
+    
+    FlingEnabled = true
+    print("🚀 Fling Players ativado! Encoste nos jogadores para jogá-los longe!")
+    
+    -- Função para fling um jogador
+    local function flingPlayer(targetPlayer)
+        if not targetPlayer or not targetPlayer.Character then return end
+        
+        local targetHrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local targetHumanoid = targetPlayer.Character:FindFirstChild("Humanoid")
+        
+        if targetHrp and targetHumanoid and targetHumanoid.Health > 0 then
+            -- Calcular direção do fling
+            local direction = (targetHrp.Position - hrp.Position).Unit
+            
+            -- Criar BodyVelocity para o fling
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+            bodyVelocity.Velocity = direction * 50 + Vector3.new(0, 25, 0) -- Força horizontal + vertical
+            bodyVelocity.Parent = targetHrp
+            
+            -- Remover BodyVelocity após um tempo para não fazer o jogador voar para sempre
+            game:GetService("Debris"):AddItem(bodyVelocity, 0.3)
+            
+            print("💥 " .. targetPlayer.Name .. " foi flingado!")
+        end
+    end
+    
+    -- Detectar colisões usando Touched event em todas as partes do personagem
+    local connections = {}
+    
+    local function setupFlingDetection()
+        if not char or not FlingEnabled then return end
+        
+        -- Conectar em todas as partes do personagem
+        for _, part in pairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                local connection = part.Touched:Connect(function(hit)
+                    if not FlingEnabled then return end
+                    
+                    -- Verificar se tocou em outro jogador
+                    local hitCharacter = hit.Parent
+                    local hitPlayer = game.Players:GetPlayerFromCharacter(hitCharacter)
+                    
+                    if hitPlayer and hitPlayer ~= Player then
+                        -- Verificar se tem HumanoidRootPart e Humanoid (é um jogador válido)
+                        local hitHrp = hitCharacter:FindFirstChild("HumanoidRootPart")
+                        local hitHumanoid = hitCharacter:FindFirstChild("Humanoid")
+                        
+                        if hitHrp and hitHumanoid then
+                            flingPlayer(hitPlayer)
+                        end
+                    end
+                end)
+                
+                table.insert(connections, connection)
+            end
+        end
+    end
+    
+    -- Configurar detecção inicial
+    setupFlingDetection()
+    
+    -- Reconectar quando o personagem respawnar
+    FlingConnection = Player.CharacterAdded:Connect(function(newChar)
+        char = newChar
+        hrp = char:WaitForChild("HumanoidRootPart")
+        
+        -- Limpar conexões antigas
+        for _, conn in pairs(connections) do
+            if conn then conn:Disconnect() end
+        end
+        connections = {}
+        
+        -- Aguardar personagem carregar completamente
+        wait(2)
+        
+        if FlingEnabled then
+            setupFlingDetection()
+            print("🔄 Fling reativado após respawn!")
+        end
+    end)
+end
+
+local function StopFling()
+    FlingEnabled = false
+    
+    if FlingConnection then
+        FlingConnection:Disconnect()
+        FlingConnection = nil
+    end
+    
+    print("❌ Fling Players desativado!")
+end
+
 -- ===== KILL AURA MELHORADO =====
 local function StartKillAura()
     local char = Player.Character
@@ -566,29 +671,7 @@ local function StartKillAura()
     
     -- Sistema de auto click MELHORADO - só clica quando necessário
     local function autoClick()
-        -- Verificar se estamos focados no jogo e não na UI
-        pcall(function()
-            if KillAuraTarget and KillAuraTarget.Character and KillAuraTarget.Character:FindFirstChild("Humanoid") then
-                local targetHumanoid = KillAuraTarget.Character.Humanoid
-                if targetHumanoid.Health > 0 then
-                    -- Simular clique apenas quando temos um alvo válido
-                    local mouse = Player:GetMouse()
-                    if mouse then
-                        -- Usar firemouse1click (mais seguro)
-                        pcall(function()
-                            fireclickdetector(workspace.ClickDetector, 0)
-                        end)
-                        
-                        -- Backup: usar mouse1press/release
-                        pcall(function()
-                            mouse1press()
-                            wait(0.01)
-                            mouse1release()
-                        end)
-                    end
-                end
-            end
-        end)
+        -- Removido - usuário vai clicar manualmente
     end
     
     -- Selecionar primeiro alvo
@@ -722,11 +805,6 @@ local function StopKillAura()
         KillAuraConnection = nil
     end
     
-    if KillAuraClickConnection then
-        KillAuraClickConnection:Disconnect()
-        KillAuraClickConnection = nil
-    end
-    
     if KillAuraTarget then
         print("Kill Aura desativado - Alvo: " .. KillAuraTarget.Name .. " liberado!")
         KillAuraTarget = nil
@@ -773,6 +851,19 @@ Tabs.Main:Toggle({
             CreateSafeZone()
         else
             RemoveSafeZone()
+        end
+    end
+})
+
+Tabs.Main:Toggle({
+    Title = "Fling Players",
+    Description = "Quando encosta em outro jogador, joga ele longe!",
+    Value = false,
+    Callback = function(state)
+        if state then
+            StartFling()
+        else
+            StopFling()
         end
     end
 })
@@ -863,7 +954,7 @@ Tabs.HideAndSeek:Toggle({
 
 Tabs.HideAndSeek:Toggle({
     Title = "Kill Aura",
-    Description = "Auto-teleporta e ataca inimigos automaticamente - Melhorado!",
+    Description = "Teleporta automaticamente para inimigos - Você clica para atacar!",
     Value = false,
     Callback = function(state)
         if state then
