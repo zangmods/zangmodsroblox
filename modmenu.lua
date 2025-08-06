@@ -356,6 +356,87 @@ local function RemoveGlassESP()
     print("ESP Glass desativado!")
 end
 
+local function EnlargeHoneycombParts()
+    pcall(function()
+        local shapesFolder = workspace.Map.Honeycomb.Shapes
+        local shapes = shapesFolder:GetChildren()
+        
+        print("Aumentando levemente as parts do Honeycomb...")
+        
+        for _, shape in pairs(shapes) do
+            if shape:FindFirstChild("Path") then
+                local pathParts = shape.Path:GetChildren()
+                print("Forma: " .. shape.Name .. " - processando " .. #pathParts .. " parts")
+                
+                for i, part in pairs(pathParts) do
+                    if part:IsA("BasePart") then
+                        -- Salvar tamanho original
+                        if not part:GetAttribute("OriginalSize") then
+                            part:SetAttribute("OriginalSizeX", part.Size.X)
+                            part:SetAttribute("OriginalSizeY", part.Size.Y)  
+                            part:SetAttribute("OriginalSizeZ", part.Size.Z)
+                        end
+                        
+                        -- Aumentar mais para pegar vários pontos com um clique (multiplicar por 8x)
+                        local currentSize = part.Size
+                        part.Size = Vector3.new(
+                            currentSize.X * 8,  -- X aumenta 8x
+                            currentSize.Y * 8,  -- Y aumenta 8x  
+                            currentSize.Z * 8   -- Z aumenta 8x
+                        )
+                        
+                        print("Part " .. i .. ": " .. 
+                              string.format("%.3f,%.3f,%.3f", currentSize.X, currentSize.Y, currentSize.Z) .. 
+                              " → " .. 
+                              string.format("%.3f,%.3f,%.3f", part.Size.X, part.Size.Y, part.Size.Z))
+                    end
+                end
+                
+                print("Forma " .. shape.Name .. " processada!")
+            end
+        end
+        
+        print("Parts aumentadas! Agora deve ser mais fácil desenhar!")
+    end)
+end
+
+local function RestoreHoneycombParts()
+    pcall(function()
+        local shapesFolder = workspace.Map.Honeycomb.Shapes
+        local shapes = shapesFolder:GetChildren()
+        
+        print("Restaurando tamanhos originais...")
+        
+        for _, shape in pairs(shapes) do
+            if shape:FindFirstChild("Path") then
+                local pathParts = shape.Path:GetChildren()
+                
+                for i, part in pairs(pathParts) do
+                    if part:IsA("BasePart") then
+                        if part:GetAttribute("OriginalSizeX") then
+                            -- Restaurar tamanho original
+                            part.Size = Vector3.new(
+                                part:GetAttribute("OriginalSizeX"),
+                                part:GetAttribute("OriginalSizeY"),
+                                part:GetAttribute("OriginalSizeZ")
+                            )
+                            
+                            -- Remover atributos salvos
+                            part:SetAttribute("OriginalSizeX", nil)
+                            part:SetAttribute("OriginalSizeY", nil)
+                            part:SetAttribute("OriginalSizeZ", nil)
+                            
+                            print("Part " .. i .. " restaurada!")
+                        end
+                    end
+                end
+            end
+        end
+        
+        print("Tamanhos originais restaurados!")
+    end)
+end
+
 local Tabs = {}
 
 -- ABA MAIN
@@ -412,6 +493,19 @@ Tabs.RedLight:Toggle({
 })
 
 -- ===== ABA DALGONA =====
+Tabs.Dalgona:Toggle({
+    Title = "Enlarge Parts",
+    Description = "Aumenta as parts (8x) quando ativado, restaura quando desativado",
+    Value = false,
+    Callback = function(state)
+        if state then
+            EnlargeHoneycombParts()
+        else
+            RestoreHoneycombParts()
+        end
+    end
+})
+
 Tabs.Dalgona:Toggle({
     Title = "Ativar",
     Value = false,
