@@ -1,368 +1,956 @@
---[[
-    Script: Squid Game X
-    Autor: ZangMods
-    Descrição: Hub de utilidades para o jogo.
-    Status: BETA
-]]
-
--- Carregar a biblioteca da interface
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
--- Criar a janela principal
+function gradient(text, startColor, endColor)
+local result = ""
+local length = #text
+for i = 1, length do
+local t = (i - 1) / math.max(length - 1, 1)
+local r = math.floor((startColor.R + (endColor.R - startColor.R) * t) * 255)
+local g = math.floor((startColor.G + (endColor.G - startColor.G) * t) * 255)
+local b = math.floor((startColor.B + (endColor.B - startColor.B) * t) * 255)
+local char = text:sub(i, i)
+result = result .. "<font color="rgb(" .. r ..", " .. g .. ", " .. b .. ")">" .. char .. "</font>"
+end
+return result
+end
+
 local Window = WindUI:CreateWindow({
-    Title = "Squid Game X",
-    Icon = "rbxassetid://129260712070622",
-    IconThemed = true,
-    Author = "ZangMods",
-    Folder = "CloudHub",
-    Size = UDim2.fromOffset(580, 480), -- Aumentei um pouco a altura para o aviso
-    Transparent = true,
-    Theme = "Dark",
+Title = "Squid Game X - ZangMods",
+Icon = "rbxassetid://129260712070622",
+IconThemed = true,
+Author = "mais funções em breve",
+Folder = "CloudHub",
+Size = UDim2.fromOffset(580, 460),
+Transparent = true,
+Theme = "Dark",
+User = {
+Enabled = false,
+Callback = function() print("clicked") end,
+Anonymous = true
+},
+SideBarWidth = 200,
+ScrollBarEnabled = true,
 })
 
--- Configurar o botão para abrir/fechar a UI
 Window:EditOpenButton({
-    Title = "Open ZangMods Hub",
-    Icon = "monitor",
-    CornerRadius = UDim.new(0, 16),
-    StrokeThickness = 2,
-    Color = ColorSequence.new(
-        Color3.fromHex("FF0F7B"),
-        Color3.fromHex("F89B29")
-    ),
-    Draggable = true,
+Title = "Open ZangMods Hub",
+Icon = "monitor",
+CornerRadius = UDim.new(0,16),
+StrokeThickness = 2,
+Color = ColorSequence.new(
+Color3.fromHex("FF0F7B"),
+Color3.fromHex("F89B29")
+),
+Draggable = true,
 })
 
--- Serviços e variáveis do Roblox
-local Player = game:GetService("Players").LocalPlayer
+local Player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 
--- ===== VARIÁVEIS GLOBAIS PARA AS FUNÇÕES =====
+-- ===== VARIÁVEIS GLOBAIS =====
 local EspHighlights = {}
 local TeamEspHighlights = {}
 local TeamEspConnection = nil
-local BabyEspGuis = {}
 local BabyEspConnection = nil
+local BabyEspGuis = {}
 local GlassEspHighlights = {}
 local SafeZonePart = nil
 local OriginalPosition = nil
 local KillAuraConnection = nil
 local KillAuraTarget = nil
-local WalkConnection = nil -- Conexão para a caminhada automática
-
--- ===== FUNÇÕES DE UTILIDADE =====
-
-local function cleanupConnections()
-    -- Função para limpar todas as conexões ativas ao fechar a UI ou mudar de função
-    if TeamEspConnection then TeamEspConnection:Disconnect() end
-    if BabyEspConnection then BabyEspConnection:Disconnect() end
-    if KillAuraConnection then KillAuraConnection:Disconnect() end
-    if WalkConnection then WalkConnection:Disconnect() end
-    TeamEspConnection, BabyEspConnection, KillAuraConnection, WalkConnection = nil, nil, nil, nil
-end
-
-local function cleanupHighlights(tbl)
-    for _, highlight in pairs(tbl) do
-        if highlight and highlight.Parent then
-            highlight:Destroy()
-        end
-    end
-    return {}
-end
-
-local function cleanupGuis(tbl)
-    for _, gui in pairs(tbl) do
-        if gui and gui.Parent then
-            gui:Destroy()
-        end
-    end
-    return {}
-end
+local KillAuraClickConnection = nil
+local FlingConnection = nil
+local FlingEnabled = false
 
 -- ===== FUNÇÕES DOS JOGOS =====
-
 local function CreateExitDoorsESP()
-    EspHighlights = cleanupHighlights(EspHighlights)
-    pcall(function()
-        for _, door in ipairs(Workspace.Map.HideNSeek.Elements.ExitDoors:GetChildren()) do
-            if door and (door:IsA("Model") or door:IsA("Part")) then
-                local highlight = Instance.new("Highlight", door)
-                highlight.FillColor = Color3.fromRGB(0, 255, 0)
-                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                highlight.FillTransparency = 0.5
-                highlight.Adornee = door
-                table.insert(EspHighlights, highlight)
-            end
+-- Limpar highlights existentes
+for _, highlight in pairs(EspHighlights) do
+if highlight then highlight:Destroy() end
+end
+EspHighlights = {}
+
+code
+Code
+download
+content_copy
+expand_less
+
+-- Criar highlights para as portas de saída
+pcall(function()
+    local exitDoors = workspace.Map.HideNSeek.Elements.ExitDoors:GetChildren()
+    for i, door in pairs(exitDoors) do
+        if door and (door:IsA("Model") or door:IsA("Part")) then
+            local highlight = Instance.new("Highlight")
+            highlight.Parent = door
+            highlight.FillColor = Color3.fromRGB(0, 255, 0) -- Verde
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Branco
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            highlight.Adornee = door
+            
+            table.insert(EspHighlights, highlight)
+            print("ESP aplicado na porta de saída " .. i)
         end
-    end)
+    end
+end)
+print("ESP ExitDoors ativado!")
+
 end
 
-local function WalkToRedLightEnd()
-    local char = Player.Character
-    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-    
-    pcall(function()
-        local safeZone = Workspace.Map.RedLightGreenLight.SafeZone.Main
-        if safeZone then
-            humanoid:MoveTo(safeZone.Position)
-            -- Para caso o jogador seja parado por algum motivo, ele tenta continuar
-            if WalkConnection then WalkConnection:Disconnect() end
-            WalkConnection = humanoid.MoveToFinished:Connect(function(reached)
-                if not reached then
-                    task.wait(0.5)
-                    humanoid:MoveTo(safeZone.Position)
-                else
-                    WalkConnection:Disconnect()
-                    WalkConnection = nil
-                end
-            end)
-        end
-    end)
+local function RemoveExitDoorsESP()
+for _, highlight in pairs(EspHighlights) do
+if highlight then highlight:Destroy() end
+end
+EspHighlights = {}
+print("ESP ExitDoors desativado!")
+end
+
+local function TeleportToRedLightEnd()
+local char = Player.Character
+local hrp = char and char:FindFirstChild("HumanoidRootPart")
+if hrp then
+pcall(function()
+local safeZone = workspace.Map.RedLightGreenLight.SafeZone.Main
+if safeZone then
+local position = safeZone.Position
+hrp.CFrame = CFrame.new(position.X, position.Y + 5, position.Z)
+print("Teleportado para o fim do Red Light!")
+else
+warn("SafeZone não encontrada!")
+end
+end)
+else
+warn("Erro: HumanoidRootPart não encontrado.")
+end
 end
 
 local function CreateTeamESP()
-    TeamEspHighlights = cleanupHighlights(TeamEspHighlights)
-    if TeamEspConnection then TeamEspConnection:Disconnect() TeamEspConnection = nil end
+-- Limpar highlights existentes
+for _, highlight in pairs(TeamEspHighlights) do
+if highlight then highlight:Destroy() end
+end
+TeamEspHighlights = {}
 
-    local function addHighlightToPlayer(plr)
-        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local isRed = plr.Character:FindFirstChild("Vest_red")
-            local isBlue = plr.Character:FindFirstChild("Vest_blue")
-            if isRed or isBlue then
-                local highlight = Instance.new("Highlight", plr.Character)
-                highlight.Adornee = plr.Character
-                highlight.FillTransparency = 0.5
-                highlight.FillColor = isRed and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 0, 255)
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+local function addHighlightToPlayer(player)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local vestRed = player.Character:FindFirstChild("Vest_red")
+        local vestBlue = player.Character:FindFirstChild("Vest_blue")
+        
+        if vestRed or vestBlue then
+            local highlight = Instance.new("Highlight")
+            highlight.Parent = player.Character
+            highlight.Adornee = player.Character
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            
+            if vestRed then
+                highlight.FillColor = Color3.fromRGB(255, 0, 0) -- Vermelho
                 highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                table.insert(TeamEspHighlights, highlight)
+                print("ESP aplicado no jogador " .. player.Name .. " (Team Red)")
+            elseif vestBlue then
+                highlight.FillColor = Color3.fromRGB(0, 0, 255) -- Azul
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                print("ESP aplicado no jogador " .. player.Name .. " (Team Blue)")
             end
+            
+            table.insert(TeamEspHighlights, highlight)
         end
     end
+end
 
-    for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
-        if p ~= Player then pcall(addHighlightToPlayer, p) end
+-- Aplicar ESP em todos os jogadores atuais
+for _, player in pairs(game.Players:GetPlayers()) do
+    if player ~= Player then
+        pcall(function()
+            addHighlightToPlayer(player)
+        end)
     end
+end
 
-    TeamEspConnection = game:GetService("Players").PlayerAdded:Connect(function(p)
-        p.CharacterAdded:Connect(function() task.wait(2) pcall(addHighlightToPlayer, p) end)
+-- Monitorar novos jogadores
+TeamEspConnection = game.Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        wait(2) -- Aguardar o personagem carregar completamente
+        pcall(function()
+            addHighlightToPlayer(player)
+        end)
     end)
+end)
+
+print("ESP Teams ativado!")
+
+end
+
+local function RemoveTeamESP()
+for _, highlight in pairs(TeamEspHighlights) do
+if highlight then highlight:Destroy() end
+end
+TeamEspHighlights = {}
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+if TeamEspConnection then
+    TeamEspConnection:Disconnect()
+    TeamEspConnection = nil
+end
+
+print("ESP Teams desativado!")
+
 end
 
 local function RemoveJumpRope()
-    pcall(function()
-        local rope = Workspace.Map.JumpRope.Rope
-        if rope then rope:Destroy() end
-    end)
+pcall(function()
+local rope = workspace.Map.JumpRope.Rope
+if rope then
+rope:Destroy()
+print("Jump Rope removida!")
+else
+warn("Rope não encontrada!")
+end
+end)
 end
 
 local function CreateBabyESP()
-    BabyEspGuis = cleanupGuis(BabyEspGuis)
-    if BabyEspConnection then BabyEspConnection:Disconnect() BabyEspConnection = nil end
+-- Limpar ESPs existentes
+for _, gui in pairs(BabyEspGuis) do
+if gui then gui:Destroy() end
+end
+BabyEspGuis = {}
 
-    local function addBabyESP(plr)
-        local char = plr.Character
-        if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("BabyBack") then
-            local gui = Instance.new("BillboardGui", char.HumanoidRootPart)
-            gui.Size = UDim2.new(0, 100, 0, 50)
-            gui.StudsOffset = Vector3.new(0, 3, 0)
-            gui.AlwaysOnTop = true
-            local text = Instance.new("TextLabel", gui)
-            text.Size = UDim2.fromScale(1, 1)
-            text.BackgroundTransparency = 1
-            text.Text = "BABY"
-            text.TextColor3 = Color3.fromRGB(255, 255, 0)
-            text.TextScaled = true
-            text.Font = Enum.Font.SourceSansBold
-            table.insert(BabyEspGuis, gui)
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+local function addBabyESP(player)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("BabyBack") then
+        -- Criar BillboardGui
+        local billboardGui = Instance.new("BillboardGui")
+        billboardGui.Parent = player.Character.HumanoidRootPart
+        billboardGui.Size = UDim2.new(0, 100, 0, 50)
+        billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+        billboardGui.AlwaysOnTop = true
+        
+        -- Criar TextLabel
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Parent = billboardGui
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = "BABY"
+        textLabel.TextColor3 = Color3.fromRGB(255, 255, 0) -- Amarelo
+        textLabel.TextScaled = true
+        textLabel.TextStrokeTransparency = 0
+        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0) -- Contorno preto
+        textLabel.Font = Enum.Font.SourceSansBold
+        
+        table.insert(BabyEspGuis, billboardGui)
+        print("ESP Baby aplicado no jogador " .. player.Name)
+    end
+end
+
+-- Verificar todos os jogadores atuais
+for _, player in pairs(game.Players:GetPlayers()) do
+    pcall(function()
+        addBabyESP(player)
+    end)
+end
+
+-- Monitorar mudanças nos jogadores
+BabyEspConnection = RunService.Heartbeat:Connect(function()
+    -- Limpar ESPs antigos
+    for i = #BabyEspGuis, 1, -1 do
+        local gui = BabyEspGuis[i]
+        if not gui or not gui.Parent or not gui.Parent.Parent or not gui.Parent.Parent:FindFirstChild("BabyBack") then
+            if gui then gui:Destroy() end
+            table.remove(BabyEspGuis, i)
         end
     end
-
-    for _, p in ipairs(game:GetService("Players"):GetPlayers()) do pcall(addBabyESP, p) end
     
-    BabyEspConnection = RunService.Heartbeat:Connect(function()
-        for i = #BabyEspGuis, 1, -1 do
-            local gui = BabyEspGuis[i]
-            if not (gui and gui.Parent and gui.Parent.Parent and gui.Parent.Parent:FindFirstChild("BabyBack")) then
-                if gui then gui:Destroy() end
-                table.remove(BabyEspGuis, i)
+    -- Adicionar novos ESPs
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player.Character and player.Character:FindFirstChild("BabyBack") then
+            local hasESP = false
+            for _, gui in pairs(BabyEspGuis) do
+                if gui and gui.Parent and gui.Parent.Parent == player.Character then
+                    hasESP = true
+                    break
+                end
+            end
+            
+            if not hasESP then
+                pcall(function()
+                    addBabyESP(player)
+                end)
             end
         end
-    end)
+    end
+end)
+
+print("ESP Baby ativado!")
+
+end
+
+local function RemoveBabyESP()
+for _, gui in pairs(BabyEspGuis) do
+if gui then gui:Destroy() end
+end
+BabyEspGuis = {}
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+if BabyEspConnection then
+    BabyEspConnection:Disconnect()
+    BabyEspConnection = nil
+end
+
+print("ESP Baby desativado!")
+
 end
 
 local function CreateGlassESP()
-    GlassEspHighlights = cleanupHighlights(GlassEspHighlights)
-    pcall(function()
-        for _, glass in ipairs(Workspace.Map.Glass.Glasses:GetChildren()) do
-            local partsToHighlight = {}
-            if glass:IsA("Model") or glass:IsA("Folder") then
-                partsToHighlight = glass:GetChildren()
-            elseif glass:IsA("BasePart") then
-                table.insert(partsToHighlight, glass)
-            end
-            for _, part in ipairs(partsToHighlight) do
+-- Limpar highlights existentes
+for _, highlight in pairs(GlassEspHighlights) do
+if highlight then highlight:Destroy() end
+end
+GlassEspHighlights = {}
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+pcall(function()
+    local glassFolder = workspace.Map.Glass.Glasses
+    local glasses = glassFolder:GetChildren()
+    
+    for _, glass in pairs(glasses) do
+        if glass:IsA("Model") or glass:IsA("Folder") then
+            -- Procurar por partes do vidro dentro do modelo/pasta
+            local glassParts = glass:GetChildren()
+            for _, part in pairs(glassParts) do
                 if part:IsA("BasePart") then
-                    local highlight = Instance.new("Highlight", part)
+                    local highlight = Instance.new("Highlight")
+                    highlight.Parent = part
                     highlight.Adornee = part
-                    highlight.FillTransparency = 0.4
-                    highlight.FillColor = (part.CanCollide and part.Transparency < 1) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+                    highlight.FillTransparency = 0.3
+                    highlight.OutlineTransparency = 0
+                    
+                    -- Verificar propriedades para determinar se é seguro
+                    -- Vidros seguros geralmente têm CanCollide = true
+                    -- Vidros falsos podem ter CanCollide = false ou outras propriedades diferentes
+                    if part.CanCollide == true and part.Transparency < 1 then
+                        -- Vidro seguro - verde
+                        highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        print("Vidro seguro detectado: " .. glass.Name)
+                    else
+                        -- Vidro perigoso - vermelho
+                        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        print("Vidro perigoso detectado: " .. glass.Name)
+                    end
+                    
                     table.insert(GlassEspHighlights, highlight)
                 end
             end
+        elseif glass:IsA("BasePart") then
+            -- Se for uma parte direta
+            local highlight = Instance.new("Highlight")
+            highlight.Parent = glass
+            highlight.Adornee = glass
+            highlight.FillTransparency = 0.3
+            highlight.OutlineTransparency = 0
+            
+            if glass.CanCollide == true and glass.Transparency < 1 then
+                highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                print("Vidro seguro detectado: " .. glass.Name)
+            else
+                highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                print("Vidro perigoso detectado: " .. glass.Name)
+            end
+            
+            table.insert(GlassEspHighlights, highlight)
         end
-    end)
+    end
+end)
+
+print("ESP Glass ativado! Verde = Seguro, Vermelho = Perigoso")
+
 end
 
-local function EnlargeHoneycombParts(state)
-    pcall(function()
-        for _, shape in ipairs(Workspace.Map.Honeycomb.Shapes:GetChildren()) do
-            if shape:FindFirstChild("Path") then
-                for _, part in ipairs(shape.Path:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        if state and not part:GetAttribute("OriginalSize") then
-                            part:SetAttribute("OriginalSize", part.Size)
-                        end
-                        part.Size = state and part:GetAttribute("OriginalSize") * 3 or part:GetAttribute("OriginalSize")
-                        if not state then part:SetAttribute("OriginalSize", nil) end
+local function RemoveGlassESP()
+for _, highlight in pairs(GlassEspHighlights) do
+if highlight then highlight:Destroy() end
+end
+GlassEspHighlights = {}
+print("ESP Glass desativado!")
+end
+
+local function EnlargeHoneycombParts()
+pcall(function()
+local shapesFolder = workspace.Map.Honeycomb.Shapes
+local shapes = shapesFolder:GetChildren()
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+print("Aumentando levemente as parts do Honeycomb...")
+    
+    for _, shape in pairs(shapes) do
+        if shape:FindFirstChild("Path") then
+            local pathParts = shape.Path:GetChildren()
+            print("Forma: " .. shape.Name .. " - processando " .. #pathParts .. " parts")
+            
+            for i, part in pairs(pathParts) do
+                if part:IsA("BasePart") then
+                    -- Salvar tamanho original
+                    if not part:GetAttribute("OriginalSize") then
+                        part:SetAttribute("OriginalSizeX", part.Size.X)
+                        part:SetAttribute("OriginalSizeY", part.Size.Y)  
+                        part:SetAttribute("OriginalSizeZ", part.Size.Z)
+                    end
+                    
+                    -- Aumentar moderadamente para facilitar o clique (multiplicar por 3x)
+                    local currentSize = part.Size
+                    part.Size = Vector3.new(
+                        currentSize.X * 3,  -- X aumenta 3x
+                        currentSize.Y * 3,  -- Y aumenta 3x  
+                        currentSize.Z * 3   -- Z aumenta 3x
+                    )
+                    
+                    print("Part " .. i .. ": " .. 
+                          string.format("%.3f,%.3f,%.3f", currentSize.X, currentSize.Y, currentSize.Z) .. 
+                          " → " .. 
+                          string.format("%.3f,%.3f,%.3f", part.Size.X, part.Size.Y, part.Size.Z))
+                end
+            end
+            
+            print("Forma " .. shape.Name .. " processada!")
+        end
+    end
+    
+    print("Parts aumentadas! Agora deve ser mais fácil desenhar!")
+end)
+
+end
+
+local function RestoreHoneycombParts()
+pcall(function()
+local shapesFolder = workspace.Map.Honeycomb.Shapes
+local shapes = shapesFolder:GetChildren()
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+print("Restaurando tamanhos originais...")
+    
+    for _, shape in pairs(shapes) do
+        if shape:FindFirstChild("Path") then
+            local pathParts = shape.Path:GetChildren()
+            
+            for i, part in pairs(pathParts) do
+                if part:IsA("BasePart") then
+                    if part:GetAttribute("OriginalSizeX") then
+                        -- Restaurar tamanho original
+                        part.Size = Vector3.new(
+                            part:GetAttribute("OriginalSizeX"),
+                            part:GetAttribute("OriginalSizeY"),
+                            part:GetAttribute("OriginalSizeZ")
+                        )
+                        
+                        -- Remover atributos salvos
+                        part:SetAttribute("OriginalSizeX", nil)
+                        part:SetAttribute("OriginalSizeY", nil)
+                        part:SetAttribute("OriginalSizeZ", nil)
+                        
+                        print("Part " .. i .. " restaurada!")
                     end
                 end
             end
         end
-    end)
+    end
+    
+    print("Tamanhos originais restaurados!")
+end)
+
 end
 
 local function CreateSafeZone()
-    local char = Player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    OriginalPosition = hrp.CFrame
-    pcall(function()
-        SafeZonePart = Instance.new("Part", Workspace)
-        SafeZonePart.Name = "ZangModsSafeZone"
-        SafeZonePart.Size = Vector3.new(10, 1, 10)
-        SafeZonePart.Position = Vector3.new(0, 2000, 0)
-        SafeZonePart.Anchored = true
-        SafeZonePart.Material = Enum.Material.ForceField
-        SafeZonePart.Color = Color3.fromRGB(0, 128, 255)
-        SafeZonePart.Transparency = 0.5
-        hrp.CFrame = SafeZonePart.CFrame * CFrame.new(0, 5, 0)
-    end)
+local char = Player.Character
+local hrp = char and char:FindFirstChild("HumanoidRootPart")
+if not hrp then
+warn("HumanoidRootPart não encontrado!")
+return
+end
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+-- Salvar posição original
+OriginalPosition = hrp.CFrame
+
+pcall(function()
+    -- Criar parte do Safe Zone bem alto
+    SafeZonePart = Instance.new("Part")
+    SafeZonePart.Name = "ZangModsSafeZone"
+    SafeZonePart.Size = Vector3.new(10, 1, 10)
+    SafeZonePart.Position = Vector3.new(0, 2000, 0) -- Bem alto no céu
+    SafeZonePart.Anchored = true
+    SafeZonePart.CanCollide = true
+    SafeZonePart.CanQuery = false
+    SafeZonePart.Material = Enum.Material.ForceField
+    SafeZonePart.BrickColor = BrickColor.new("Bright blue")
+    SafeZonePart.Transparency = 0.3
+    SafeZonePart.Parent = workspace
+    
+    -- Criar texto "ZangMods" na parte
+    local surfaceGui = Instance.new("SurfaceGui")
+    surfaceGui.Parent = SafeZonePart
+    surfaceGui.Face = Enum.NormalId.Top
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Parent = surfaceGui
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = "ZangMods"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextScaled = true
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    textLabel.Font = Enum.Font.SourceSansBold
+    
+    -- Teleportar para o Safe Zone
+    hrp.CFrame = CFrame.new(SafeZonePart.Position + Vector3.new(0, 5, 0))
+    
+    print("Safe Zone criado! Você está seguro no ZangMods Safe Zone!")
+end)
+
 end
 
 local function RemoveSafeZone()
-    if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and OriginalPosition then
-        Player.Character.HumanoidRootPart.CFrame = OriginalPosition
-    end
-    if SafeZonePart then SafeZonePart:Destroy() SafeZonePart = nil end
-    OriginalPosition = nil
+local char = Player.Character
+local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+-- Teleportar de volta para posição original
+if hrp and OriginalPosition then
+    hrp.CFrame = OriginalPosition
+    print("Voltou para a posição original!")
 end
 
-local function StartKillAura()
-    if KillAuraConnection then KillAuraConnection:Disconnect() KillAuraConnection = nil end
-    local char = Player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local myTeam = char:FindFirstChild("Vest_red") and "red" or (char:FindFirstChild("Vest_blue") and "blue" or nil)
-    if not myTeam then return end
+-- Remover parte do Safe Zone
+if SafeZonePart then
+    SafeZonePart:Destroy()
+    SafeZonePart = nil
+    print("Safe Zone removido!")
+end
 
-    local function findNearestEnemy()
-        local nearest, shortest = nil, math.huge
-        for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
-            if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                local isEnemy = (myTeam == "red" and p.Character:FindFirstChild("Vest_blue")) or (myTeam == "blue" and p.Character:FindFirstChild("Vest_red"))
+OriginalPosition = nil
+
+end
+
+-- ===== KILL AURA MELHORADO =====
+local function StartKillAura()
+local char = Player.Character
+local hrp = char and char:FindFirstChild("HumanoidRootPart")
+if not hrp then
+warn("HumanoidRootPart não encontrado!")
+return
+end
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+-- Detectar meu time
+local myTeam = nil
+if char:FindFirstChild("Vest_red") then
+    myTeam = "red"
+    print("Você é do time VERMELHO - atacando jogadores AZUIS")
+elseif char:FindFirstChild("Vest_blue") then
+    myTeam = "blue"
+    print("Você é do time AZUL - atacando jogadores VERMELHOS")
+else
+    warn("Você não está em nenhum time! Kill Aura cancelado.")
+    return
+end
+
+-- Encontrar jogador inimigo mais próximo (independente da distância)
+local function findNearestEnemy()
+    local nearestEnemy = nil
+    local shortestDistance = math.huge
+    
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= Player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") then
+            local humanoid = player.Character.Humanoid
+            local isEnemy = false
+            
+            -- Verificar se está vivo E se é inimigo
+            if humanoid.Health > 0 then
+                if myTeam == "red" and player.Character:FindFirstChild("Vest_blue") then
+                    isEnemy = true -- Sou vermelho, ele é azul = inimigo
+                elseif myTeam == "blue" and player.Character:FindFirstChild("Vest_red") then
+                    isEnemy = true -- Sou azul, ele é vermelho = inimigo
+                end
+                
                 if isEnemy then
-                    local dist = (hrp.Position - p.Character.HumanoidRootPart.Position).Magnitude
-                    if dist < shortest then shortest, nearest = dist, p end
+                    local distance = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        nearestEnemy = player
+                    end
                 end
             end
         end
-        return nearest
     end
-
-    KillAuraConnection = RunService.Heartbeat:Connect(function()
-        if not (KillAuraTarget and KillAuraTarget.Character and KillAuraTarget.Character:FindFirstChildOfClass("Humanoid") and KillAuraTarget.Character:FindFirstChildOfClass("Humanoid").Health > 0) then
-            KillAuraTarget = findNearestEnemy()
-        end
-        if KillAuraTarget and KillAuraTarget.Character and KillAuraTarget.Character:FindFirstChild("HumanoidRootPart") then
-            local targetHrp = KillAuraTarget.Character.HumanoidRootPart
-            hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(math.random(-2,2), 0.5, math.random(-2,2)), targetHrp.Position)
-        else
-            -- Se não há mais alvos, para a função
-            if KillAuraConnection then KillAuraConnection:Disconnect() KillAuraConnection = nil end
-            KillAuraTarget = nil
-        end
-    end)
+    
+    return nearestEnemy
 end
 
--- ===== CRIAÇÃO DA INTERFACE =====
+-- Sistema de auto click MELHORADO - só clica quando necessário
+local function autoClick()
+    -- Removido - usuário vai clicar manualmente
+end
 
--- ABA PRINCIPAL (MAIN)
-local MainTab = Window:Tab({ Title = "Main", Icon = "home" })
-MainTab:Label({ Title = "AVISO: Este script é uma versão BETA.", Color = Color3.fromRGB(255, 80, 80) })
-MainTab:Divider()
-MainTab:Toggle({
-    Title = "ESP Bebê", Description = "Mostra quem está carregando o bebê nas costas.", Value = false,
-    Callback = function(state) if state then CreateBabyESP() else BabyEspGuis = cleanupGuis(BabyEspGuis); if BabyEspConnection then BabyEspConnection:Disconnect() end end end
-})
-MainTab:Toggle({
-    Title = "Safe Zone", Description = "Teleporta para uma plataforma segura no céu.", Value = false,
-    Callback = function(state) if state then CreateSafeZone() else RemoveSafeZone() end end
-})
+-- Selecionar primeiro alvo
+KillAuraTarget = findNearestEnemy()
+if not KillAuraTarget then
+    warn("Nenhum jogador inimigo encontrado!")
+    return
+end
 
--- ABA RED LIGHT
-local RedLightTab = Window:Tab({ Title = "Red Light", Icon = "alert-octagon" })
-RedLightTab:Button({
-    Title = "Andar até o Fim", Description = "Caminha automaticamente até a linha de chegada.",
-    Callback = WalkToRedLightEnd
-})
+local enemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
+print("Kill Aura ativado - Alvo: " .. KillAuraTarget.Name .. " (Team " .. enemyTeam .. ")")
 
--- ABA DALGONA
-local DalgonaTab = Window:Tab({ Title = "Dalgona", Icon = "circle" })
-DalgonaTab:Toggle({
-    Title = "Dalgona Helper", Description = "Aumenta o tamanho das partes do desenho para facilitar.", Value = false,
-    Callback = EnlargeHoneycombParts
-})
+-- Variável para controlar última vida do alvo
+local lastTargetHealth = KillAuraTarget.Character.Humanoid.Health
 
--- ABA HIDE AND SEEK
-local HideAndSeekTab = Window:Tab({ Title = "Hide and Seek", Icon = "eye-off" })
-HideAndSeekTab:Toggle({
-    Title = "ESP Portas de Saída", Description = "Destaca as portas de saída corretas.", Value = false,
-    Callback = function(state) if state then CreateExitDoorsESP() else EspHighlights = cleanupHighlights(EspHighlights) end end
-})
-HideAndSeekTab:Toggle({
-    Title = "ESP Times", Description = "Destaca os jogadores de cada time.", Value = false,
-    Callback = function(state) if state then CreateTeamESP() else TeamEspHighlights = cleanupHighlights(TeamEspHighlights); if TeamEspConnection then TeamEspConnection:Disconnect() end end end
-})
-HideAndSeekTab:Toggle({
-    Title = "Kill Aura", Description = "Gruda nos inimigos automaticamente para você atacar.", Value = false,
-    Callback = function(state) if state then StartKillAura() else if KillAuraConnection then KillAuraConnection:Disconnect() KillAuraConnection = nil end KillAuraTarget = nil end end
-})
-
--- ABA JUMP ROPE
-local JumpRopeTab = Window:Tab({ Title = "Jump Rope", Icon = "move" })
-JumpRopeTab:Toggle({
-    Title = "Remover Corda", Description = "Remove a corda para não te atrapalhar.", Value = false,
-    Callback = function(state) if state then RemoveJumpRope() end -- A corda não volta, então só precisa da ação de remover
-})
-
--- ABA GLASS BRIDGE
-local GlassBridgeTab = Window:Tab({ Title = "Glass Bridge", Icon = "square" })
-GlassBridgeTab:Toggle({
-    Title = "ESP Vidros", Description = "Mostra vidros seguros (verde) e perigosos (vermelho).", Value = false,
-    Callback = function(state) if state then CreateGlassESP() else GlassEspHighlights = cleanupHighlights(GlassEspHighlights) end end
-})
-
--- Seleciona a primeira aba para ser exibida
-Window:SelectTab(1)
-
--- Função para limpar tudo ao fechar
-Window:OnClose(function()
-    cleanupConnections()
-    cleanupHighlights(EspHighlights)
-    cleanupHighlights(TeamEspHighlights)
-    cleanupHighlights(GlassEspHighlights)
-    cleanupGuis(BabyEspGuis)
-    if SafeZonePart then SafeZonePart:Destroy() SafeZonePart = nil end
+-- Sistema de clique automático com controle
+KillAuraClickConnection = RunService.Heartbeat:Connect(function()
+    if KillAuraTarget and KillAuraTarget.Character and KillAuraTarget.Character:FindFirstChild("Humanoid") then
+        local targetHumanoid = KillAuraTarget.Character.Humanoid
+        if targetHumanoid.Health > 0 then
+            -- Só clica se o alvo estiver realmente vivo e válido
+            autoClick()
+        end
+    end
 end)
+
+-- Loop principal de teleport e controle de alvos
+KillAuraConnection = RunService.Heartbeat:Connect(function()
+    -- Verificar se ainda estou no mesmo time
+    local currentMyTeam = nil
+    if char:FindFirstChild("Vest_red") then
+        currentMyTeam = "red"
+    elseif char:FindFirstChild("Vest_blue") then
+        currentMyTeam = "blue"
+    end
+    
+    if currentMyTeam ~= myTeam then
+        print("Mudança de time detectada! Reiniciando Kill Aura...")
+        StopKillAura()
+        StartKillAura()
+        return
+    end
+    
+    if KillAuraTarget and KillAuraTarget.Character then
+        local targetHrp = KillAuraTarget.Character:FindFirstChild("HumanoidRootPart")
+        local targetHumanoid = KillAuraTarget.Character:FindFirstChild("Humanoid")
+        
+        -- Verificação MELHORADA se o alvo morreu
+        local targetIsDead = false
+        if not targetHumanoid or not targetHrp then
+            targetIsDead = true
+        elseif targetHumanoid.Health <= 0 then
+            targetIsDead = true
+        elseif targetHumanoid.PlatformStand == true then
+            targetIsDead = true -- Jogador caído/morto
+        elseif targetHrp.Position.Y < -100 then
+            targetIsDead = true -- Caiu do mapa
+        end
+        
+        if targetIsDead then
+            print("🎯 ALVO " .. KillAuraTarget.Name .. " FOI ELIMINADO! Procurando novo inimigo...")
+            
+            -- Aguardar um pouco para garantir que o alvo foi processado
+            wait(0.1)
+            
+            -- Procurar próximo alvo instantaneamente
+            local newTarget = findNearestEnemy()
+            if newTarget and newTarget ~= KillAuraTarget then
+                KillAuraTarget = newTarget
+                local newEnemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
+                print("🔄 NOVO ALVO: " .. KillAuraTarget.Name .. " (Team " .. newEnemyTeam .. ")")
+                
+                -- Teleportar IMEDIATAMENTE para o novo alvo
+                local newTargetHrp = KillAuraTarget.Character.HumanoidRootPart
+                if newTargetHrp then
+                    local offset = Vector3.new(
+                        math.random(-3, 3),
+                        1,
+                        math.random(-3, 3)
+                    )
+                    hrp.CFrame = CFrame.new(newTargetHrp.Position + offset, newTargetHrp.Position)
+                    print("⚡ TELEPORTADO PARA NOVO ALVO!")
+                    lastTargetHealth = KillAuraTarget.Character.Humanoid.Health
+                end
+            else
+                print("❌ Nenhum inimigo restante! Kill Aura pausado.")
+                KillAuraTarget = nil
+            end
+            return
+        end
+        
+        -- Se o alvo ainda está vivo, continuar grudando nele
+        if targetHrp and targetHumanoid.Health > 0 then
+            local offset = Vector3.new(
+                math.random(-2, 2),
+                0.5,
+                math.random(-2, 2)
+            )
+            hrp.CFrame = CFrame.new(targetHrp.Position + offset, targetHrp.Position)
+        end
+        
+    else
+        -- Alvo perdido completamente, procurar novo
+        print("🔍 Alvo perdido! Procurando novo inimigo...")
+        KillAuraTarget = findNearestEnemy()
+        if KillAuraTarget then
+            local newEnemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
+            print("✅ Novo alvo encontrado: " .. KillAuraTarget.Name .. " (Team " .. newEnemyTeam .. ")")
+            
+            -- Teleportar imediatamente
+            local newTargetHrp = KillAuraTarget.Character.HumanoidRootPart
+            if newTargetHrp then
+                local offset = Vector3.new(
+                    math.random(-3, 3),
+                    1,
+                    math.random(-3, 3)
+                )
+                hrp.CFrame = CFrame.new(newTargetHrp.Position + offset, newTargetHrp.Position)
+                lastTargetHealth = KillAuraTarget.Character.Humanoid.Health
+            end
+        else
+            print("❌ Nenhum inimigo disponível!")
+        end
+    end
+end)
+
+end
+
+local function StopKillAura()
+if KillAuraConnection then
+KillAuraConnection:Disconnect()
+KillAuraConnection = nil
+end
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+if KillAuraTarget then
+    print("Kill Aura desativado - Alvo: " .. KillAuraTarget.Name .. " liberado!")
+    KillAuraTarget = nil
+else
+    print("Kill Aura desativado!")
+end
+
+end
+
+local Tabs = {}
+
+-- ABA MAIN
+Tabs.Main = Window:Tab({ Title = "Main", Icon = "home" })
+
+-- ===== INTERFACE - ABAS DIRETAS =====
+Tabs.RedLight = Window:Tab({ Title = "Red Light", Icon = "alert-octagon" })
+Tabs.Dalgona = Window:Tab({ Title = "Dalgona", Icon = "circle" })
+Tabs.TugOfWar = Window:Tab({ Title = "Tug of War", Icon = "git-merge" })
+Tabs.HideAndSeek = Window:Tab({ Title = "Hide and Seek", Icon = "eye-off" })
+Tabs.JumpRope = Window:Tab({ Title = "Jump Rope", Icon = "move" })
+Tabs.GlassBridge = Window:Tab({ Title = "Glass Bridge", Icon = "square" })
+Tabs.Mingle = Window:Tab({ Title = "Mingle", Icon = "users" })
+Tabs.Final = Window:Tab({ Title = "Final", Icon = "flag" })
+
+-- ===== ABA MAIN =====
+Tabs.Main:Toggle({
+Title = "Esp Baby",
+Description = "Mostra texto 'BABY' em cima do jogador que tem BabyBack",
+Value = false,
+Callback = function(state)
+if state then
+CreateBabyESP()
+else
+RemoveBabyESP()
+end
+end
+})
+
+Tabs.Main:Toggle({
+Title = "Safe Zone",
+Description = "Teleporta para zona segura no céu com plataforma ZangMods",
+Value = false,
+Callback = function(state)
+if state then
+CreateSafeZone()
+else
+RemoveSafeZone()
+end
+end
+})
+
+
+-- ===== ABA RED LIGHT =====
+Tabs.RedLight:Button({
+Title = "Teleportar pro Fim",
+Description = "Teleporta para cima da SafeZone",
+Callback = function()
+TeleportToRedLightEnd()
+end
+})
+
+
+-- ===== ABA DALGONA =====
+Tabs.Dalgona:Toggle({
+Title = "Dalgona Helper",
+Description = "Aumenta as parts (3x) quando ativado, restaura quando desativado",
+Value = false,
+Callback = function(state)
+if state then
+EnlargeHoneycombParts()
+else
+RestoreHoneycombParts()
+end
+end
+})
+
+
+-- ===== ABA TUG OF WAR =====
+
+
+-- ===== ABA HIDE AND SEEK =====
+Tabs.HideAndSeek:Toggle({
+Title = "Esp ExitDoors",
+Description = "Mostra highlight verde nas portas de saída",
+Value = false,
+Callback = function(state)
+if state then
+CreateExitDoorsESP()
+else
+RemoveExitDoorsESP()
+end
+end
+})
+
+Tabs.HideAndSeek:Toggle({
+Title = "Esp Teams",
+Description = "Mostra highlight nos jogadores com Vest_red (vermelho) e Vest_blue (azul)",
+Value = false,
+Callback = function(state)
+if state then
+CreateTeamESP()
+else
+RemoveTeamESP()
+end
+end
+})
+
+Tabs.HideAndSeek:Toggle({
+Title = "Kill Aura",
+Description = "Teleporta automaticamente para inimigos - Você clica para atacar!",
+Value = false,
+Callback = function(state)
+if state then
+StartKillAura()
+else
+StopKillAura()
+end
+end
+})
+
+
+
+-- ===== ABA JUMP ROPE =====
+Tabs.JumpRope:Toggle({
+Title = "Remove Rope",
+Description = "Remove a corda do Jump Rope",
+Value = false,
+Callback = function(state)
+if state then
+RemoveJumpRope()
+end
+end
+})
+
+
+-- ===== ABA GLASS BRIDGE =====
+Tabs.GlassBridge:Toggle({
+Title = "Esp Glass",
+Description = "Mostra vidros seguros (verde) e perigosos (vermelho)",
+Value = false,
+Callback = function(state)
+if state then
+CreateGlassESP()
+else
+RemoveGlassESP()
+end
+end
+})
+
+
+
+Window:SelectTab(1)
+Window:OnClose(function()
+print("UI fechada.")
+end)
+
+print("Z")
+print("Script")
