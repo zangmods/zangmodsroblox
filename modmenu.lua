@@ -15,10 +15,10 @@ function gradient(text, startColor, endColor)
 end
 
 local Window = WindUI:CreateWindow({
-    Title = "ZangModffs Hub",
+    Title = "Squid Game X",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
-    Author = "Ink Game alfaff",
+    Author = "ZangMods",
     Folder = "CloudHub",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -99,22 +99,23 @@ local function RemoveExitDoorsESP()
     print("ESP ExitDoors desativado!")
 end
 
-local function TeleportToRedLightEnd()
+-- MODIFICADO: Agora anda até o local em vez de teleportar
+local function WalkToRedLightEnd()
     local char = Player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
         pcall(function()
             local safeZone = workspace.Map.RedLightGreenLight.SafeZone.Main
             if safeZone then
-                local position = safeZone.Position
-                hrp.CFrame = CFrame.new(position.X, position.Y + 5, position.Z)
-                print("Teleportado para o fim do Red Light!")
+                local destination = safeZone.Position
+                humanoid:MoveTo(destination)
+                print("Andando até o fim do Red Light!")
             else
                 warn("SafeZone não encontrada!")
             end
         end)
     else
-        warn("Erro: HumanoidRootPart não encontrado.")
+        warn("Erro: Humanoid não encontrado.")
     end
 end
 
@@ -312,18 +313,14 @@ local function CreateGlassESP()
                         highlight.OutlineTransparency = 0
                         
                         -- Verificar propriedades para determinar se é seguro
-                        -- Vidros seguros geralmente têm CanCollide = true
-                        -- Vidros falsos podem ter CanCollide = false ou outras propriedades diferentes
                         if part.CanCollide == true and part.Transparency < 1 then
                             -- Vidro seguro - verde
                             highlight.FillColor = Color3.fromRGB(0, 255, 0)
                             highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                            print("Vidro seguro detectado: " .. glass.Name)
                         else
                             -- Vidro perigoso - vermelho
                             highlight.FillColor = Color3.fromRGB(255, 0, 0)
                             highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                            print("Vidro perigoso detectado: " .. glass.Name)
                         end
                         
                         table.insert(GlassEspHighlights, highlight)
@@ -340,11 +337,9 @@ local function CreateGlassESP()
                 if glass.CanCollide == true and glass.Transparency < 1 then
                     highlight.FillColor = Color3.fromRGB(0, 255, 0)
                     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    print("Vidro seguro detectado: " .. glass.Name)
                 else
                     highlight.FillColor = Color3.fromRGB(255, 0, 0)
                     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    print("Vidro perigoso detectado: " .. glass.Name)
                 end
                 
                 table.insert(GlassEspHighlights, highlight)
@@ -373,8 +368,6 @@ local function EnlargeHoneycombParts()
         for _, shape in pairs(shapes) do
             if shape:FindFirstChild("Path") then
                 local pathParts = shape.Path:GetChildren()
-                print("Forma: " .. shape.Name .. " - processando " .. #pathParts .. " parts")
-                
                 for i, part in pairs(pathParts) do
                     if part:IsA("BasePart") then
                         -- Salvar tamanho original
@@ -387,19 +380,12 @@ local function EnlargeHoneycombParts()
                         -- Aumentar moderadamente para facilitar o clique (multiplicar por 3x)
                         local currentSize = part.Size
                         part.Size = Vector3.new(
-                            currentSize.X * 3,  -- X aumenta 3x
-                            currentSize.Y * 3,  -- Y aumenta 3x  
-                            currentSize.Z * 3   -- Z aumenta 3x
+                            currentSize.X * 3,
+                            currentSize.Y * 3,
+                            currentSize.Z * 3
                         )
-                        
-                        print("Part " .. i .. ": " .. 
-                              string.format("%.3f,%.3f,%.3f", currentSize.X, currentSize.Y, currentSize.Z) .. 
-                              " → " .. 
-                              string.format("%.3f,%.3f,%.3f", part.Size.X, part.Size.Y, part.Size.Z))
                     end
                 end
-                
-                print("Forma " .. shape.Name .. " processada!")
             end
         end
         
@@ -432,8 +418,6 @@ local function RestoreHoneycombParts()
                             part:SetAttribute("OriginalSizeX", nil)
                             part:SetAttribute("OriginalSizeY", nil)
                             part:SetAttribute("OriginalSizeZ", nil)
-                            
-                            print("Part " .. i .. " restaurada!")
                         end
                     end
                 end
@@ -512,7 +496,6 @@ local function RemoveSafeZone()
     OriginalPosition = nil
 end
 
--- ===== KILL AURA MELHORADO =====
 local function StartKillAura()
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -521,7 +504,6 @@ local function StartKillAura()
         return
     end
     
-    -- Detectar meu time
     local myTeam = nil
     if char:FindFirstChild("Vest_red") then
         myTeam = "red"
@@ -534,7 +516,6 @@ local function StartKillAura()
         return
     end
     
-    -- Encontrar jogador inimigo mais próximo (independente da distância)
     local function findNearestEnemy()
         local nearestEnemy = nil
         local shortestDistance = math.huge
@@ -544,12 +525,11 @@ local function StartKillAura()
                 local humanoid = player.Character.Humanoid
                 local isEnemy = false
                 
-                -- Verificar se está vivo E se é inimigo
                 if humanoid.Health > 0 then
                     if myTeam == "red" and player.Character:FindFirstChild("Vest_blue") then
-                        isEnemy = true -- Sou vermelho, ele é azul = inimigo
+                        isEnemy = true
                     elseif myTeam == "blue" and player.Character:FindFirstChild("Vest_red") then
-                        isEnemy = true -- Sou azul, ele é vermelho = inimigo
+                        isEnemy = true
                     end
                     
                     if isEnemy then
@@ -566,12 +546,6 @@ local function StartKillAura()
         return nearestEnemy
     end
     
-    -- Sistema de auto click MELHORADO - só clica quando necessário
-    local function autoClick()
-        -- Removido - usuário vai clicar manualmente
-    end
-    
-    -- Selecionar primeiro alvo
     KillAuraTarget = findNearestEnemy()
     if not KillAuraTarget then
         warn("Nenhum jogador inimigo encontrado!")
@@ -581,23 +555,7 @@ local function StartKillAura()
     local enemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
     print("Kill Aura ativado - Alvo: " .. KillAuraTarget.Name .. " (Team " .. enemyTeam .. ")")
     
-    -- Variável para controlar última vida do alvo
-    local lastTargetHealth = KillAuraTarget.Character.Humanoid.Health
-    
-    -- Sistema de clique automático com controle
-    KillAuraClickConnection = RunService.Heartbeat:Connect(function()
-        if KillAuraTarget and KillAuraTarget.Character and KillAuraTarget.Character:FindFirstChild("Humanoid") then
-            local targetHumanoid = KillAuraTarget.Character.Humanoid
-            if targetHumanoid.Health > 0 then
-                -- Só clica se o alvo estiver realmente vivo e válido
-                autoClick()
-            end
-        end
-    end)
-    
-    -- Loop principal de teleport e controle de alvos
     KillAuraConnection = RunService.Heartbeat:Connect(function()
-        -- Verificar se ainda estou no mesmo time
         local currentMyTeam = nil
         if char:FindFirstChild("Vest_red") then
             currentMyTeam = "red"
@@ -616,42 +574,26 @@ local function StartKillAura()
             local targetHrp = KillAuraTarget.Character:FindFirstChild("HumanoidRootPart")
             local targetHumanoid = KillAuraTarget.Character:FindFirstChild("Humanoid")
             
-            -- Verificação MELHORADA se o alvo morreu
             local targetIsDead = false
-            if not targetHumanoid or not targetHrp then
+            if not targetHumanoid or not targetHrp or targetHumanoid.Health <= 0 or targetHumanoid.PlatformStand == true or targetHrp.Position.Y < -100 then
                 targetIsDead = true
-            elseif targetHumanoid.Health <= 0 then
-                targetIsDead = true
-            elseif targetHumanoid.PlatformStand == true then
-                targetIsDead = true -- Jogador caído/morto
-            elseif targetHrp.Position.Y < -100 then
-                targetIsDead = true -- Caiu do mapa
             end
             
             if targetIsDead then
                 print("🎯 ALVO " .. KillAuraTarget.Name .. " FOI ELIMINADO! Procurando novo inimigo...")
-                
-                -- Aguardar um pouco para garantir que o alvo foi processado
                 wait(0.1)
                 
-                -- Procurar próximo alvo instantaneamente
                 local newTarget = findNearestEnemy()
                 if newTarget and newTarget ~= KillAuraTarget then
                     KillAuraTarget = newTarget
                     local newEnemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
                     print("🔄 NOVO ALVO: " .. KillAuraTarget.Name .. " (Team " .. newEnemyTeam .. ")")
                     
-                    -- Teleportar IMEDIATAMENTE para o novo alvo
                     local newTargetHrp = KillAuraTarget.Character.HumanoidRootPart
                     if newTargetHrp then
-                        local offset = Vector3.new(
-                            math.random(-3, 3),
-                            1,
-                            math.random(-3, 3)
-                        )
+                        local offset = Vector3.new(math.random(-3, 3), 1, math.random(-3, 3))
                         hrp.CFrame = CFrame.new(newTargetHrp.Position + offset, newTargetHrp.Position)
                         print("⚡ TELEPORTADO PARA NOVO ALVO!")
-                        lastTargetHealth = KillAuraTarget.Character.Humanoid.Health
                     end
                 else
                     print("❌ Nenhum inimigo restante! Kill Aura pausado.")
@@ -660,34 +602,22 @@ local function StartKillAura()
                 return
             end
             
-            -- Se o alvo ainda está vivo, continuar grudando nele
             if targetHrp and targetHumanoid.Health > 0 then
-                local offset = Vector3.new(
-                    math.random(-2, 2),
-                    0.5,
-                    math.random(-2, 2)
-                )
+                local offset = Vector3.new(math.random(-2, 2), 0.5, math.random(-2, 2))
                 hrp.CFrame = CFrame.new(targetHrp.Position + offset, targetHrp.Position)
             end
             
         else
-            -- Alvo perdido completamente, procurar novo
             print("🔍 Alvo perdido! Procurando novo inimigo...")
             KillAuraTarget = findNearestEnemy()
             if KillAuraTarget then
                 local newEnemyTeam = KillAuraTarget.Character:FindFirstChild("Vest_red") and "VERMELHO" or "AZUL"
                 print("✅ Novo alvo encontrado: " .. KillAuraTarget.Name .. " (Team " .. newEnemyTeam .. ")")
                 
-                -- Teleportar imediatamente
                 local newTargetHrp = KillAuraTarget.Character.HumanoidRootPart
                 if newTargetHrp then
-                    local offset = Vector3.new(
-                        math.random(-3, 3),
-                        1,
-                        math.random(-3, 3)
-                    )
+                    local offset = Vector3.new(math.random(-3, 3), 1, math.random(-3, 3))
                     hrp.CFrame = CFrame.new(newTargetHrp.Position + offset, newTargetHrp.Position)
-                    lastTargetHealth = KillAuraTarget.Character.Humanoid.Health
                 end
             else
                 print("❌ Nenhum inimigo disponível!")
@@ -712,20 +642,21 @@ end
 
 local Tabs = {}
 
--- ABA MAIN
+-- ===== INTERFACE - ABAS =====
 Tabs.Main = Window:Tab({ Title = "Main", Icon = "home" })
-
--- ===== INTERFACE - ABAS DIRETAS =====
 Tabs.RedLight = Window:Tab({ Title = "Red Light", Icon = "alert-octagon" })
 Tabs.Dalgona = Window:Tab({ Title = "Dalgona", Icon = "circle" })
-Tabs.TugOfWar = Window:Tab({ Title = "Tug of War", Icon = "git-merge" })
 Tabs.HideAndSeek = Window:Tab({ Title = "Hide and Seek", Icon = "eye-off" })
 Tabs.JumpRope = Window:Tab({ Title = "Jump Rope", Icon = "move" })
 Tabs.GlassBridge = Window:Tab({ Title = "Glass Bridge", Icon = "square" })
-Tabs.Mingle = Window:Tab({ Title = "Mingle", Icon = "users" })
-Tabs.Final = Window:Tab({ Title = "Final", Icon = "flag" })
 
 -- ===== ABA MAIN =====
+Tabs.Main:Label({
+    Title = "AVISO: Este script está em versão BETA.",
+    Color = Color3.fromRGB(255, 80, 80) 
+})
+Tabs.Main:Divider()
+
 Tabs.Main:Toggle({
     Title = "Esp Baby",
     Description = "Mostra texto 'BABY' em cima do jogador que tem BabyBack",
@@ -741,7 +672,7 @@ Tabs.Main:Toggle({
 
 Tabs.Main:Toggle({
     Title = "Safe Zone",
-    Description = "Teleporta para zona segura no céu com plataforma ZangMods",
+    Description = "Teleporta para uma plataforma segura no céu",
     Value = false,
     Callback = function(state)
         if state then
@@ -752,36 +683,19 @@ Tabs.Main:Toggle({
     end
 })
 
-Tabs.Main:Toggle({
-    Title = "Ativar",
-    Description = "Toggle de exemplo",
-    Value = false,
-    Callback = function(state)
-        print("Main: " .. tostring(state))
-    end
-})
-
 -- ===== ABA RED LIGHT =====
 Tabs.RedLight:Button({
-    Title = "Teleportar pro Fim",
-    Description = "Teleporta para cima da SafeZone",
+    Title = "Andar até o Fim",
+    Description = "Anda automaticamente até a SafeZone",
     Callback = function()
-        TeleportToRedLightEnd()
-    end
-})
-
-Tabs.RedLight:Toggle({
-    Title = "Ativar",
-    Value = false,
-    Callback = function(state)
-        print("Red Light: " .. tostring(state))
+        WalkToRedLightEnd()
     end
 })
 
 -- ===== ABA DALGONA =====
 Tabs.Dalgona:Toggle({
     Title = "Dalgona Helper",
-    Description = "Aumenta as parts (3x) quando ativado, restaura quando desativado",
+    Description = "Aumenta as parts do desenho para facilitar o recorte",
     Value = false,
     Callback = function(state)
         if state then
@@ -789,23 +703,6 @@ Tabs.Dalgona:Toggle({
         else
             RestoreHoneycombParts()
         end
-    end
-})
-
-Tabs.Dalgona:Toggle({
-    Title = "Ativar",
-    Value = false,
-    Callback = function(state)
-        print("Dalgona: " .. tostring(state))
-    end
-})
-
--- ===== ABA TUG OF WAR =====
-Tabs.TugOfWar:Toggle({
-    Title = "Ativar",
-    Value = false,
-    Callback = function(state)
-        print("Tug of War: " .. tostring(state))
     end
 })
 
@@ -825,7 +722,7 @@ Tabs.HideAndSeek:Toggle({
 
 Tabs.HideAndSeek:Toggle({
     Title = "Esp Teams",
-    Description = "Mostra highlight nos jogadores com Vest_red (vermelho) e Vest_blue (azul)",
+    Description = "Mostra highlight nos jogadores de cada time",
     Value = false,
     Callback = function(state)
         if state then
@@ -838,7 +735,7 @@ Tabs.HideAndSeek:Toggle({
 
 Tabs.HideAndSeek:Toggle({
     Title = "Kill Aura",
-    Description = "Teleporta automaticamente para inimigos - Você clica para atacar!",
+    Description = "Teleporta automaticamente para inimigos. Você clica para atacar!",
     Value = false,
     Callback = function(state)
         if state then
@@ -849,31 +746,15 @@ Tabs.HideAndSeek:Toggle({
     end
 })
 
-Tabs.HideAndSeek:Toggle({
-    Title = "Ativar",
-    Value = false,
-    Callback = function(state)
-        print("Hide and Seek: " .. tostring(state))
-    end
-})
-
 -- ===== ABA JUMP ROPE =====
 Tabs.JumpRope:Toggle({
     Title = "Remove Rope",
-    Description = "Remove a corda do Jump Rope",
+    Description = "Remove a corda do minigame para não te atrapalhar",
     Value = false,
     Callback = function(state)
         if state then
             RemoveJumpRope()
         end
-    end
-})
-
-Tabs.JumpRope:Toggle({
-    Title = "Ativar",
-    Value = false,
-    Callback = function(state)
-        print("Jump Rope: " .. tostring(state))
     end
 })
 
@@ -891,36 +772,9 @@ Tabs.GlassBridge:Toggle({
     end
 })
 
-Tabs.GlassBridge:Toggle({
-    Title = "Ativar",
-    Value = false,
-    Callback = function(state)
-        print("Glass Bridge: " .. tostring(state))
-    end
-})
-
--- ===== ABA MINGLE =====
-Tabs.Mingle:Toggle({
-    Title = "Ativar",
-    Value = false,
-    Callback = function(state)
-        print("Mingle: " .. tostring(state))
-    end
-})
-
--- ===== ABA FINAL =====
-Tabs.Final:Toggle({
-    Title = "Ativar",
-    Value = false,
-    Callback = function(state)
-        print("Final: " .. tostring(state))
-    end
-})
-
 Window:SelectTab(1)
 Window:OnClose(function()
     print("UI fechada.")
 end)
 
-print("ZangMods Hub carregado!")
-print("Script base limpo - Pronto para novo jogo!")
+print("Squid Game X by ZangMods Carregado!")
