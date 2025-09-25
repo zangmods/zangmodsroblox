@@ -5907,7 +5907,7 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
-                function Tab:AddGroupbox(Info)
+                        function Tab:AddGroupbox(Info)
             local BoxHolder = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
@@ -5942,10 +5942,12 @@ function Library:CreateWindow(WindowInfo)
                     CornerRadius = UDim.new(0, WindowInfo.CornerRadius - 1),
                     Parent = GroupboxHolder,
                 })
-                Library:MakeLine(GroupboxHolder, {
-                    Position = UDim2.fromOffset(0, 34),
-                    Size = UDim2.new(1, 0, 0, 1),
-                })
+                
+                -- [REMOVIDO] A linha abaixo era a que criava a separação indesejada.
+                -- Library:MakeLine(GroupboxHolder, {
+                --     Position = UDim2.fromOffset(0, 34),
+                --     Size = UDim2.new(1, 0, 0, 1),
+                -- })
                 
                 -- Cabeçalho clicável
                 GroupboxHeader = New("TextButton", {
