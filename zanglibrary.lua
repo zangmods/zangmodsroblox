@@ -5607,7 +5607,7 @@ function Library:CreateWindow(WindowInfo)
     --// Window Table \\--
     local Window = {}
 
-        function Window:AddTab(...)
+    function Window:AddTab(...)
         local Name = nil
         local Icon = nil
         local Description = nil
@@ -5695,7 +5695,7 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 2), -- [CORRIGIDO] Padding reduzido de 6 para 2
+                Padding = UDim.new(0, 6),
                 Parent = TabLeft,
             })
             do
@@ -5724,7 +5724,7 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 2), -- [CORRIGIDO] Padding reduzido de 6 para 2
+                Padding = UDim.new(0, 6),
                 Parent = TabRight,
             })
             do
