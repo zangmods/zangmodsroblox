@@ -6579,13 +6579,13 @@ function Library:CreateWindow(WindowInfo)
         task.spawn(Library.Toggle)
     end
 
-        -- O código anterior para botões de celular e keybind foi substituído por um único botão superior.
+            -- O código anterior para botões de celular e keybind foi substituído por um único botão superior arrastável.
     local zangModsButton = New("TextButton", {
         Text = "ZangMods",
         TextSize = 16,
         BackgroundColor3 = "MainColor",
         AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0, 10), -- Posição: Topo, Centralizado
+        Position = UDim2.new(0.5, 0, 0, 5), -- Posição ajustada para ficar mais no topo
         Size = UDim2.fromOffset(120, 30),
         ZIndex = 999,
         Parent = ScreenGui,
@@ -6598,6 +6598,9 @@ function Library:CreateWindow(WindowInfo)
         Color = "OutlineColor",
         Parent = zangModsButton,
     })
+
+    -- Adiciona a funcionalidade de arrastar ao botão
+    Library:MakeDraggable(zangModsButton, zangModsButton, true)
 
     -- Conecta o clique do botão à função de abrir/fechar a UI
     zangModsButton.MouseButton1Click:Connect(function()
