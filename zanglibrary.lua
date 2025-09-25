@@ -5309,14 +5309,13 @@ function Library:CreateWindow(WindowInfo)
             Parent = MainFrame,
         })
         do
-            -- MODIFICAÇÃO: A linha que separava as abas do conteúdo foi ajustada para a nova largura
             local Lines = {
                 {
                     Position = UDim2.fromOffset(0, 48),
                     Size = UDim2.new(1, 0, 0, 1),
                 },
                 {
-                    Position = UDim2.fromOffset(60, 0), -- Ajustado para a nova largura da barra de abas
+                    Position = UDim2.fromOffset(60, 0), 
                     Size = UDim2.new(0, 1, 1, -21),
                 },
                 {
@@ -5356,49 +5355,31 @@ function Library:CreateWindow(WindowInfo)
         })
         Library:MakeDraggable(MainFrame, TopBar, false, true)
 
-        --// Title
-        local TitleHolder = New("Frame", {
+        --// MODIFICAÇÃO: O antigo "TitleHolder" agora é o "IconHolder".
+        local IconHolder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.fromOffset(200, 48), -- Tamanho ajustado para não depender da escala
+            Size = UDim2.new(0, 60, 1, 0), -- Largura fixa de 60px para alinhar com a barra de abas.
             Parent = TopBar,
         })
-        New("UIListLayout", {
-            FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-            Padding = UDim.new(0, 6),
-            Parent = TitleHolder,
-        })
-
+        
+        -- O texto do título foi removido. Apenas o ícone principal é criado aqui.
         if WindowInfo.Icon then
             New("ImageLabel", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.fromScale(0.5, 0.5),
                 Image = if tonumber(WindowInfo.Icon) then string.format("rbxassetid://%d", WindowInfo.Icon) else WindowInfo.Icon,
-                Size = WindowInfo.IconSize,
-                Parent = TitleHolder,
+                Size = UDim2.new(1, -20, 1, -20), -- Ícone preenche o espaço com uma margem de 10px.
+                Parent = IconHolder,
             })
         end
-
-        local X = Library:GetTextBounds(
-            WindowInfo.Title,
-            Library.Scheme.Font,
-            20,
-            TitleHolder.AbsoluteSize.X - (WindowInfo.Icon and WindowInfo.IconSize.X.Offset + 6 or 0) - 12
-        )
-        New("TextLabel", {
-            BackgroundTransparency = 1,
-            Size = UDim2.new(0, X, 1, 0),
-            Text = WindowInfo.Title,
-            TextSize = 20,
-            Parent = TitleHolder,
-        })
         
         --// Top Right Bar
-        -- MODIFICAÇÃO: Posição e tamanho ajustados para o novo layout
+        -- MODIFICAÇÃO: Posição e tamanho ajustados para o novo layout sem título.
         local RightWrapper = New("Frame", {
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 208, 0.5, 0), -- Posição fixa à direita do título
-            Size = UDim2.new(1, -260, 1, -16), -- Tamanho ajustado
+            Position = UDim2.new(0, 60, 0.5, 0), -- Inicia logo após o IconHolder.
+            Size = UDim2.new(1, -117, 1, -16), -- Ocupa o resto do espaço.
             Parent = TopBar,
         })
 
@@ -5571,7 +5552,6 @@ function Library:CreateWindow(WindowInfo)
         })
 
         --// Tabs \\--
-        -- MODIFICAÇÃO: O tamanho do container das abas agora é fixo para evitar espaços vazios.
         Tabs = New("ScrollingFrame", {
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             BackgroundColor3 = "BackgroundColor",
@@ -5588,7 +5568,6 @@ function Library:CreateWindow(WindowInfo)
         })
 
         --// Container \\--
-        -- MODIFICAÇÃO: A posição e o tamanho do container principal foram ajustados para a nova largura das abas.
         Container = New("Frame", {
             AnchorPoint = Vector2.new(1, 0),
             BackgroundColor3 = function()
@@ -5608,8 +5587,8 @@ function Library:CreateWindow(WindowInfo)
             Parent = Container,
         })
     end
-
-    --// Window Table \\--
+    
+    -- O resto da função continua igual...
     local Window = {}
 
     function Window:AddTab(...)
@@ -5643,18 +5622,14 @@ function Library:CreateWindow(WindowInfo)
 
         Icon = Library:GetCustomIcon(Icon)
         do
-            -- MODIFICAÇÃO: Botão da aba ajustado para ser um quadrado para o ícone.
             TabButton = New("TextButton", {
                 BackgroundColor3 = "MainColor",
                 BackgroundTransparency = 1,
-                Size = UDim2.new(0, 48, 0, 48), -- Tamanho quadrado
+                Size = UDim2.new(0, 48, 0, 48),
                 Text = "",
                 Parent = Tabs,
             })
 
-            -- O TextLabel do botão da aba foi removido.
-
-            -- MODIFICAÇÃO: Ícone centralizado no botão quadrado.
             if Icon then
                 TabIcon = New("ImageLabel", {
                     AnchorPoint = Vector2.new(0.5, 0.5),
@@ -5669,7 +5644,6 @@ function Library:CreateWindow(WindowInfo)
                 })
             end
 
-            --// Tab Container \\--
             TabContainer = New("Frame", {
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 1),
@@ -5733,7 +5707,6 @@ function Library:CreateWindow(WindowInfo)
                 Library:UpdateDPI(TabRight, { Size = TabRight.Size })
             end
 
-            --// Warning Box \\--
             WarningBox = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundColor3 = Color3.fromRGB(127, 0, 0),
@@ -5799,7 +5772,6 @@ function Library:CreateWindow(WindowInfo)
             })
         end
 
-        --// Tab Table \\--
         local Tab = {
             Groupboxes = {},
             Tabboxes = {},
@@ -5897,7 +5869,6 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
-        -- MODIFICAÇÃO: A função AddGroupbox foi restaurada para a versão com gaveta animada.
         function Tab:AddGroupbox(Info)
             local BoxHolder = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
@@ -5934,7 +5905,6 @@ function Library:CreateWindow(WindowInfo)
                     Parent = GroupboxHolder,
                 })
                 
-                -- Cabeçalho clicável para a gaveta
                 GroupboxHeader = New("TextButton", {
                     BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 34),
@@ -5970,7 +5940,6 @@ function Library:CreateWindow(WindowInfo)
                     Parent = HeaderLabel,
                 })
                 
-                -- Seta para indicar estado aberto/fechado
                 Arrow = New("ImageLabel", {
                     AnchorPoint = Vector2.new(1, 0.5),
                     Image = ArrowIcon and ArrowIcon.Url or "",
@@ -5979,7 +5948,7 @@ function Library:CreateWindow(WindowInfo)
                     ImageRectSize = ArrowIcon and ArrowIcon.ImageRectSize or Vector2.zero,
                     Position = UDim2.new(1, -6, 0.5, 0),
                     Size = UDim2.fromOffset(22, 22),
-                    Rotation = 180, -- Começa fechado (seta para baixo)
+                    Rotation = 180,
                     Parent = GroupboxHeader,
                 })
 
@@ -5987,7 +5956,7 @@ function Library:CreateWindow(WindowInfo)
                     BackgroundTransparency = 1,
                     ClipsDescendants = true,
                     Position = UDim2.fromOffset(0, 35),
-                    Size = UDim2.new(1, 0, 0, 0), -- Começa com altura zero
+                    Size = UDim2.new(1, 0, 0, 0),
                     Parent = GroupboxHolder,
                 })
 
@@ -6038,7 +6007,6 @@ function Library:CreateWindow(WindowInfo)
                     local targetBackgroundSize = UDim2.new(1, 0, 0, headerHeight + contentHeight)
                     local targetContainerSize = UDim2.new(1, 0, 0, contentHeight)
 
-                    -- Usa Tween para suavizar a mudança de tamanho ao adicionar itens
                     TweenService:Create(GroupboxContainer, Library.TweenInfo, {Size = targetContainerSize}):Play()
                     TweenService:Create(Background, Library.TweenInfo, {Size = targetBackgroundSize}):Play()
                 end
@@ -6046,7 +6014,6 @@ function Library:CreateWindow(WindowInfo)
 
             setmetatable(Groupbox, BaseGroupbox)
 
-            -- Tamanho inicial (fechado)
             Background.Size = UDim2.new(1, 0, 0, 35 * Library.DPIScale)
             
             Tab.Groupboxes[Info.Name] = Groupbox
@@ -6191,7 +6158,6 @@ function Library:CreateWindow(WindowInfo)
                     Background.Size = UDim2.new(1, 0, 0, List.AbsoluteContentSize.Y + 53 * Library.DPIScale)
                 end
 
-                --// Execution \\--
                 if not Tabbox.ActiveTab then
                     Tab:Show()
                 end
@@ -6227,7 +6193,6 @@ function Library:CreateWindow(WindowInfo)
                 return
             end
 
-            -- Como não há mais texto no botão, a animação é só no ícone
             if TabIcon then
                 TweenService:Create(TabIcon, Library.TweenInfo, {
                     ImageTransparency = Hovering and 0.25 or 0.5,
@@ -6249,7 +6214,6 @@ function Library:CreateWindow(WindowInfo)
                 }):Play()
             end
 
-            -- MODIFICAÇÃO: Lógica para mostrar nome E descrição (se houver) restaurada
             if Description then
                 CurrentTabInfo.Visible = true
                 
@@ -6295,7 +6259,6 @@ function Library:CreateWindow(WindowInfo)
             Library.ActiveTab = nil
         end
 
-        --// Execution \\--
         if not Library.ActiveTab then
             Tab:Show()
         end
@@ -6315,22 +6278,17 @@ function Library:CreateWindow(WindowInfo)
 
     function Window:AddKeyTab(Name)
         local TabButton: TextButton
-        local TabLabel
         local TabIcon
-
         local TabContainer
 
         do
-             -- MODIFICAÇÃO: Botão da aba ajustado para ser um quadrado para o ícone.
             TabButton = New("TextButton", {
                 BackgroundColor3 = "MainColor",
                 BackgroundTransparency = 1,
-                Size = UDim2.new(0, 48, 0, 48), -- Tamanho quadrado
+                Size = UDim2.new(0, 48, 0, 48),
                 Text = "",
                 Parent = Tabs,
             })
-            
-            -- O TextLabel do botão foi removido
             
             if KeyIcon then
                 TabIcon = New("ImageLabel", {
@@ -6346,7 +6304,6 @@ function Library:CreateWindow(WindowInfo)
                 })
             end
 
-            --// Tab Container \\--
             TabContainer = New("ScrollingFrame", {
                 AutomaticCanvasSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
@@ -6369,7 +6326,6 @@ function Library:CreateWindow(WindowInfo)
             })
         end
 
-        --// Tab Table \\--
         local Tab = {
             Elements = {},
             IsKeyTab = true,
@@ -6450,13 +6406,12 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveTab:Hide()
             end
             
-            -- MODIFICAÇÃO: Mostra o nome da KeyTab no topo
             CurrentTabInfo.Visible = true
             if IsDefaultSearchbarSize then
                 SearchBox.Size = UDim2.fromScale(0.5, 1)
             end
             CurrentTabLabel.Text = Name
-            CurrentTabDescription.Text = "" -- Key tabs não têm descrição
+            CurrentTabDescription.Text = ""
             CurrentTabDescription.Visible = false
 
             TweenService:Create(TabButton, Library.TweenInfo, {
@@ -6474,7 +6429,6 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
-             -- MODIFICAÇÃO: Esconde a informação do topo
             CurrentTabInfo.Visible = false
             if IsDefaultSearchbarSize then
                 SearchBox.Size = UDim2.fromScale(1, 1)
@@ -6493,7 +6447,6 @@ function Library:CreateWindow(WindowInfo)
             Library.ActiveTab = nil
         end
 
-        --// Execution \\--
         if not Library.ActiveTab then
             Tab:Show()
         end
@@ -6562,7 +6515,6 @@ function Library:CreateWindow(WindowInfo)
         Library:Toggle()
     end)
 
-    --// Execution \\--
     SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
         Library:UpdateSearch(SearchBox.Text)
     end)
