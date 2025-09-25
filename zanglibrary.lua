@@ -5607,7 +5607,7 @@ function Library:CreateWindow(WindowInfo)
     --// Window Table \\--
     local Window = {}
 
-    function Window:AddTab(...)
+        function Window:AddTab(...)
         local Name = nil
         local Icon = nil
         local Description = nil
@@ -5624,7 +5624,6 @@ function Library:CreateWindow(WindowInfo)
         end
 
         local TabButton: TextButton
-        local TabLabel
         local TabIcon
 
         local TabContainer
@@ -5639,42 +5638,28 @@ function Library:CreateWindow(WindowInfo)
 
         Icon = Library:GetCustomIcon(Icon)
         do
+            -- Botão da aba modificado para ser um quadrado que acomoda apenas o ícone
             TabButton = New("TextButton", {
                 BackgroundColor3 = "MainColor",
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 40),
+                Size = UDim2.new(0, 48, 0, 48), -- Tamanho alterado para ser um quadrado
                 Text = "",
                 Parent = Tabs,
             })
 
-            New("UIPadding", {
-                PaddingBottom = UDim.new(0, 11),
-                PaddingLeft = UDim.new(0, 12),
-                PaddingRight = UDim.new(0, 12),
-                PaddingTop = UDim.new(0, 11),
-                Parent = TabButton,
-            })
+            -- O TextLabel da aba foi removido
 
-            TabLabel = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(30, 0),
-                Size = UDim2.new(1, -30, 1, 0),
-                Text = Name,
-                TextSize = 16,
-                TextTransparency = 0.5,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = TabButton,
-            })
-
+            -- Ícone centralizado dentro do novo botão
             if Icon then
                 TabIcon = New("ImageLabel", {
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.fromScale(0.5, 0.5),
                     Image = Icon.Url,
                     ImageColor3 = Icon.Custom and "White" or "AccentColor",
                     ImageRectOffset = Icon.ImageRectOffset,
                     ImageRectSize = Icon.ImageRectSize,
                     ImageTransparency = 0.5,
-                    Size = UDim2.fromScale(1, 1),
-                    SizeConstraint = Enum.SizeConstraint.RelativeYY,
+                    Size = UDim2.new(1, -16, 1, -16), -- Preenche o botão com uma margem de 8px
                     Parent = TabButton,
                 })
             end
@@ -5907,7 +5892,7 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
-                        function Tab:AddGroupbox(Info)
+        function Tab:AddGroupbox(Info)
             local BoxHolder = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
@@ -5926,10 +5911,8 @@ function Library:CreateWindow(WindowInfo)
             })
 
             local GroupboxHolder
-            local GroupboxHeader
             local GroupboxContainer
             local GroupboxList
-            local Arrow
 
             do
                 GroupboxHolder = New("Frame", {
@@ -5942,18 +5925,14 @@ function Library:CreateWindow(WindowInfo)
                     CornerRadius = UDim.new(0, WindowInfo.CornerRadius - 1),
                     Parent = GroupboxHolder,
                 })
-                
-                -- [REMOVIDO] A linha abaixo era a que criava a separação indesejada.
-                -- Library:MakeLine(GroupboxHolder, {
-                --     Position = UDim2.fromOffset(0, 34),
-                --     Size = UDim2.new(1, 0, 0, 1),
-                -- })
-                
-                -- Cabeçalho clicável
-                GroupboxHeader = New("TextButton", {
+                Library:MakeLine(GroupboxHolder, {
+                    Position = UDim2.fromOffset(0, 34),
+                    Size = UDim2.new(1, 0, 0, 1),
+                })
+
+                local Header = New("Frame", {
                     BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 34),
-                    Text = "",
                     Parent = GroupboxHolder,
                 })
 
@@ -5966,7 +5945,7 @@ function Library:CreateWindow(WindowInfo)
                         ImageRectSize = BoxIcon.ImageRectSize,
                         Position = UDim2.fromOffset(6, 6),
                         Size = UDim2.fromOffset(22, 22),
-                        Parent = GroupboxHeader,
+                        Parent = Header,
                     })
                 end
 
@@ -5977,35 +5956,20 @@ function Library:CreateWindow(WindowInfo)
                     Text = Info.Name,
                     TextSize = 15,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Parent = GroupboxHeader,
+                    Parent = Header,
                 })
                 New("UIPadding", {
                     PaddingLeft = UDim.new(0, 12),
                     PaddingRight = UDim.new(0, 12),
                     Parent = HeaderLabel,
                 })
-                
-                -- Ícone de seta para indicar o estado (aberto/fechado)
-                Arrow = New("ImageLabel", {
-                    AnchorPoint = Vector2.new(1, 0.5),
-                    Image = ArrowIcon and ArrowIcon.Url or "",
-                    ImageColor3 = "FontColor",
-                    ImageRectOffset = ArrowIcon and ArrowIcon.ImageRectOffset or Vector2.zero,
-                    ImageRectSize = ArrowIcon and ArrowIcon.ImageRectSize or Vector2.zero,
-                    Position = UDim2.new(1, -6, 0.5, 0),
-                    Size = UDim2.fromOffset(22, 22),
-                    Rotation = 180, -- Começa fechado (seta para baixo)
-                    Parent = GroupboxHeader,
-                })
 
                 GroupboxContainer = New("Frame", {
                     BackgroundTransparency = 1,
-                    ClipsDescendants = true, -- Essencial para a animação de "gaveta"
                     Position = UDim2.fromOffset(0, 35),
-                    Size = UDim2.new(1, 0, 0, 0), -- Começa com altura zero
+                    Size = UDim2.new(1, 0, 1, -35),
                     Parent = GroupboxHolder,
                 })
-
                 GroupboxList = New("UIListLayout", {
                     Padding = UDim.new(0, 8),
                     Parent = GroupboxContainer,
@@ -6023,50 +5987,18 @@ function Library:CreateWindow(WindowInfo)
                 BoxHolder = BoxHolder,
                 Holder = Background,
                 Container = GroupboxContainer,
+
                 Tab = Tab,
-                DependencyBoxes = {},
                 Elements = {},
-                IsOpen = false, -- Novo estado para controlar se está aberto ou fechado
+                DependencyBoxes = {},
             }
 
-            -- Nova função para abrir/fechar a gaveta
-            function Groupbox:Toggle()
-                Groupbox.IsOpen = not Groupbox.IsOpen
-
-                local contentHeight = GroupboxList.AbsoluteContentSize.Y + (14 * Library.DPIScale)
-                local headerHeight = 35 * Library.DPIScale
-
-                local targetContainerSize = UDim2.new(1, 0, 0, Groupbox.IsOpen and contentHeight or 0)
-                local targetBackgroundSize = UDim2.new(1, 0, 0, Groupbox.IsOpen and headerHeight + contentHeight or headerHeight)
-                
-                -- Animações
-                TweenService:Create(Arrow, Library.TweenInfo, {Rotation = Groupbox.IsOpen and 0 or 180}):Play()
-                TweenService:Create(GroupboxContainer, Library.TweenInfo, {Size = targetContainerSize}):Play()
-                TweenService:Create(Background, Library.TweenInfo, {Size = targetBackgroundSize}):Play()
-            end
-
-            -- Conecta o clique do cabeçalho à função Toggle
-            GroupboxHeader.MouseButton1Click:Connect(Groupbox.Toggle)
-
-            -- Função Resize modificada para atualizar o tamanho apenas se a gaveta estiver aberta
             function Groupbox:Resize()
-                if Groupbox.IsOpen then
-                    local contentHeight = GroupboxList.AbsoluteContentSize.Y + (14 * Library.DPIScale)
-                    local headerHeight = 35 * Library.DPIScale
-                    
-                    local targetBackgroundSize = UDim2.new(1, 0, 0, headerHeight + contentHeight)
-                    local targetContainerSize = UDim2.new(1, 0, 0, contentHeight)
-
-                    TweenService:Create(GroupboxContainer, Library.TweenInfo, {Size = targetContainerSize}):Play()
-                    TweenService:Create(Background, Library.TweenInfo, {Size = targetBackgroundSize}):Play()
-                end
+                Background.Size = UDim2.new(1, 0, 0, GroupboxList.AbsoluteContentSize.Y + 53 * Library.DPIScale)
             end
 
             setmetatable(Groupbox, BaseGroupbox)
 
-            -- Define o tamanho inicial (fechado)
-            Background.Size = UDim2.new(1, 0, 0, 35 * Library.DPIScale)
-            
             Tab.Groupboxes[Info.Name] = Groupbox
 
             return Groupbox
@@ -6240,14 +6172,12 @@ function Library:CreateWindow(WindowInfo)
             return Tab:AddTabbox({ Side = 2, Name = Name })
         end
 
+        -- Hover modificado para não referenciar o TabLabel
         function Tab:Hover(Hovering)
             if Library.ActiveTab == Tab then
                 return
             end
 
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = Hovering and 0.25 or 0.5,
-            }):Play()
             if TabIcon then
                 TweenService:Create(TabIcon, Library.TweenInfo, {
                     ImageTransparency = Hovering and 0.25 or 0.5,
@@ -6255,6 +6185,7 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
+        -- Show modificado para exibir o nome da aba no topo
         function Tab:Show()
             if Library.ActiveTab then
                 Library.ActiveTab:Hide()
@@ -6263,38 +6194,31 @@ function Library:CreateWindow(WindowInfo)
             TweenService:Create(TabButton, Library.TweenInfo, {
                 BackgroundTransparency = 0,
             }):Play()
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0,
-            }):Play()
             if TabIcon then
                 TweenService:Create(TabIcon, Library.TweenInfo, {
                     ImageTransparency = 0,
                 }):Play()
             end
 
-            if Description then
-                CurrentTabInfo.Visible = true
-                
-                if IsDefaultSearchbarSize then
-                    SearchBox.Size = UDim2.fromScale(0.5, 1)
-                end
-
-                CurrentTabLabel.Text = Name
-                CurrentTabDescription.Text = Description
+            -- Mostra o nome da aba no topo e ajusta a barra de pesquisa
+            CurrentTabInfo.Visible = true
+            CurrentTabLabel.Text = Name
+            CurrentTabDescription.Visible = false -- Garante que a descrição não seja visível
+            
+            if not WindowInfo.DisableSearch and IsDefaultSearchbarSize then
+                SearchBox.Size = UDim2.fromScale(0.5, 1)
             end
 
             TabContainer.Visible = true
-
             Library.ActiveTab = Tab
         end
 
+        -- Hide modificado para limpar o nome da aba e restaurar a pesquisa
         function Tab:Hide()
             TweenService:Create(TabButton, Library.TweenInfo, {
                 BackgroundTransparency = 1,
             }):Play()
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0.5,
-            }):Play()
+
             if TabIcon then
                 TweenService:Create(TabIcon, Library.TweenInfo, {
                     ImageTransparency = 0.5,
@@ -6302,12 +6226,11 @@ function Library:CreateWindow(WindowInfo)
             end
             TabContainer.Visible = false
 
-            if IsDefaultSearchbarSize then
+            if not WindowInfo.DisableSearch and IsDefaultSearchbarSize then
                 SearchBox.Size = UDim2.fromScale(1, 1)
             end
             
             CurrentTabInfo.Visible = false
-
             Library.ActiveTab = nil
         end
 
