@@ -5607,7 +5607,7 @@ function Library:CreateWindow(WindowInfo)
     --// Window Table \\--
     local Window = {}
 
-    function Window:AddTab(...)
+        function Window:AddTab(...)
         local Name = nil
         local Icon = nil
         local Description = nil
@@ -5695,7 +5695,7 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 6),
+                Padding = UDim.new(0, 2), -- << CORREÇÃO: Reduzido de 6 para 2 para diminuir a "linha"
                 Parent = TabLeft,
             })
             do
@@ -5724,7 +5724,7 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabContainer,
             })
             New("UIListLayout", {
-                Padding = UDim.new(0, 6),
+                Padding = UDim.new(0, 2), -- << CORREÇÃO: Reduzido de 6 para 2 para diminuir a "linha"
                 Parent = TabRight,
             })
             do
@@ -5907,7 +5907,7 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
-                function Tab:AddGroupbox(Info)
+        function Tab:AddGroupbox(Info)
             local BoxHolder = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
@@ -5947,7 +5947,6 @@ function Library:CreateWindow(WindowInfo)
                     Size = UDim2.new(1, 0, 0, 1),
                 })
                 
-                -- Cabeçalho clicável
                 GroupboxHeader = New("TextButton", {
                     BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 34),
@@ -5983,7 +5982,6 @@ function Library:CreateWindow(WindowInfo)
                     Parent = HeaderLabel,
                 })
                 
-                -- Ícone de seta para indicar o estado (aberto/fechado)
                 Arrow = New("ImageLabel", {
                     AnchorPoint = Vector2.new(1, 0.5),
                     Image = ArrowIcon and ArrowIcon.Url or "",
@@ -5992,15 +5990,15 @@ function Library:CreateWindow(WindowInfo)
                     ImageRectSize = ArrowIcon and ArrowIcon.ImageRectSize or Vector2.zero,
                     Position = UDim2.new(1, -6, 0.5, 0),
                     Size = UDim2.fromOffset(22, 22),
-                    Rotation = 180, -- Começa fechado (seta para baixo)
+                    Rotation = 180,
                     Parent = GroupboxHeader,
                 })
 
                 GroupboxContainer = New("Frame", {
                     BackgroundTransparency = 1,
-                    ClipsDescendants = true, -- Essencial para a animação de "gaveta"
+                    ClipsDescendants = true,
                     Position = UDim2.fromOffset(0, 35),
-                    Size = UDim2.new(1, 0, 0, 0), -- Começa com altura zero
+                    Size = UDim2.new(1, 0, 0, 0),
                     Parent = GroupboxHolder,
                 })
 
@@ -6024,10 +6022,9 @@ function Library:CreateWindow(WindowInfo)
                 Tab = Tab,
                 DependencyBoxes = {},
                 Elements = {},
-                IsOpen = false, -- Novo estado para controlar se está aberto ou fechado
+                IsOpen = false,
             }
-
-            -- Nova função para abrir/fechar a gaveta
+            
             function Groupbox:Toggle()
                 Groupbox.IsOpen = not Groupbox.IsOpen
 
@@ -6037,16 +6034,13 @@ function Library:CreateWindow(WindowInfo)
                 local targetContainerSize = UDim2.new(1, 0, 0, Groupbox.IsOpen and contentHeight or 0)
                 local targetBackgroundSize = UDim2.new(1, 0, 0, Groupbox.IsOpen and headerHeight + contentHeight or headerHeight)
                 
-                -- Animações
                 TweenService:Create(Arrow, Library.TweenInfo, {Rotation = Groupbox.IsOpen and 0 or 180}):Play()
                 TweenService:Create(GroupboxContainer, Library.TweenInfo, {Size = targetContainerSize}):Play()
                 TweenService:Create(Background, Library.TweenInfo, {Size = targetBackgroundSize}):Play()
             end
 
-            -- Conecta o clique do cabeçalho à função Toggle
             GroupboxHeader.MouseButton1Click:Connect(Groupbox.Toggle)
-
-            -- Função Resize modificada para atualizar o tamanho apenas se a gaveta estiver aberta
+            
             function Groupbox:Resize()
                 if Groupbox.IsOpen then
                     local contentHeight = GroupboxList.AbsoluteContentSize.Y + (14 * Library.DPIScale)
@@ -6061,8 +6055,7 @@ function Library:CreateWindow(WindowInfo)
             end
 
             setmetatable(Groupbox, BaseGroupbox)
-
-            -- Define o tamanho inicial (fechado)
+            
             Background.Size = UDim2.new(1, 0, 0, 35 * Library.DPIScale)
             
             Tab.Groupboxes[Info.Name] = Groupbox
@@ -6078,7 +6071,7 @@ function Library:CreateWindow(WindowInfo)
             return Tab:AddGroupbox({ Side = 2, Name = Name, IconName = IconName })
         end
 
-        function Tab:AddTabbox(Info)
+        function Tab:AddTabbox(Info) -- << FUNÇÃO ATUALIZADA
             local BoxHolder = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
@@ -6097,7 +6090,10 @@ function Library:CreateWindow(WindowInfo)
             })
 
             local TabboxHolder
+            local TabboxHeader
+            local ContentHolder -- Novo frame para o conteúdo
             local TabboxButtons
+            local Arrow
 
             do
                 TabboxHolder = New("Frame", {
@@ -6111,10 +6107,56 @@ function Library:CreateWindow(WindowInfo)
                     Parent = TabboxHolder,
                 })
 
-                TabboxButtons = New("Frame", {
+                -- Cabeçalho clicável para a TabBox
+                TabboxHeader = New("TextButton", {
                     BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 34),
+                    Text = "",
                     Parent = TabboxHolder,
+                })
+                local HeaderLabel = New("TextLabel", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    Text = Info.Name, -- Usando o nome passado para a TabBox
+                    TextSize = 15,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Parent = TabboxHeader
+                })
+                 New("UIPadding", {
+                    PaddingLeft = UDim.new(0, 12),
+                    PaddingRight = UDim.new(0, 12),
+                    Parent = HeaderLabel,
+                })
+                Arrow = New("ImageLabel", {
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    Image = ArrowIcon and ArrowIcon.Url or "",
+                    ImageColor3 = "FontColor",
+                    ImageRectOffset = ArrowIcon and ArrowIcon.ImageRectOffset or Vector2.zero,
+                    ImageRectSize = ArrowIcon and ArrowIcon.ImageRectSize or Vector2.zero,
+                    Position = UDim2.new(1, -6, 0.5, 0),
+                    Size = UDim2.fromOffset(22, 22),
+                    Rotation = 180,
+                    Parent = TabboxHeader,
+                })
+
+                -- Container para o conteúdo que será mostrado/escondido
+                ContentHolder = New("Frame",{
+                    BackgroundTransparency = 1,
+                    ClipsDescendants = true,
+                    Position = UDim2.fromOffset(0, 35),
+                    Size = UDim2.new(1, 0, 0, 0), -- Começa fechado
+                    Parent = TabboxHolder
+                })
+                
+                Library:MakeLine(ContentHolder, { -- Linha separadora
+                    Size = UDim2.new(1, 0, 0, 1),
+                })
+
+                TabboxButtons = New("Frame", {
+                    BackgroundTransparency = 1,
+                    Position = UDim2.fromOffset(0, 1),
+                    Size = UDim2.new(1, 0, 0, 34),
+                    Parent = ContentHolder, -- Movido para dentro do ContentHolder
                 })
                 New("UIListLayout", {
                     FillDirection = Enum.FillDirection.Horizontal,
@@ -6125,11 +6167,33 @@ function Library:CreateWindow(WindowInfo)
 
             local Tabbox = {
                 ActiveTab = nil,
-
                 BoxHolder = BoxHolder,
                 Holder = Background,
                 Tabs = {},
+                IsOpen = false, -- Estado de gaveta
             }
+
+            -- Função para abrir/fechar a TabBox
+            function Tabbox:Toggle()
+                Tabbox.IsOpen = not Tabbox.IsOpen
+                
+                local activeTab = Tabbox.ActiveTab
+                local contentHeight = 0
+                if activeTab then
+                    local listLayout = activeTab.Container:FindFirstChildOfClass("UIListLayout")
+                    contentHeight = listLayout.AbsoluteContentSize.Y + 53 * Library.DPIScale
+                end
+
+                local headerHeight = 35 * Library.DPIScale
+                local targetContentSize = UDim2.new(1, 0, 0, Tabbox.IsOpen and contentHeight or 0)
+                local targetBackgroundSize = UDim2.new(1, 0, 0, Tabbox.IsOpen and headerHeight + contentHeight or headerHeight)
+
+                TweenService:Create(Arrow, Library.TweenInfo, {Rotation = Tabbox.IsOpen and 0 or 180}):Play()
+                TweenService:Create(ContentHolder, Library.TweenInfo, {Size = targetContentSize}):Play()
+                TweenService:Create(Background, Library.TweenInfo, {Size = targetBackgroundSize}):Play()
+            end
+            
+            TabboxHeader.MouseButton1Click:Connect(Tabbox.Toggle)
 
             function Tabbox:AddTab(Name)
                 local Button = New("TextButton", {
@@ -6153,7 +6217,7 @@ function Library:CreateWindow(WindowInfo)
                     Position = UDim2.fromOffset(0, 35),
                     Size = UDim2.new(1, 0, 1, -35),
                     Visible = false,
-                    Parent = TabboxHolder,
+                    Parent = ContentHolder, -- Movido para dentro do ContentHolder
                 })
                 local List = New("UIListLayout", {
                     Padding = UDim.new(0, 8),
@@ -6170,12 +6234,11 @@ function Library:CreateWindow(WindowInfo)
                 local Tab = {
                     ButtonHolder = Button,
                     Container = Container,
-
                     Tab = Tab,
                     Elements = {},
                     DependencyBoxes = {},
                 }
-
+                
                 function Tab:Show()
                     if Tabbox.ActiveTab then
                         Tabbox.ActiveTab:Hide()
@@ -6199,15 +6262,23 @@ function Library:CreateWindow(WindowInfo)
 
                     Tabbox.ActiveTab = nil
                 end
-
+                
+                -- Resize agora atualiza a gaveta da TabBox
                 function Tab:Resize()
-                    if Tabbox.ActiveTab ~= Tab then
+                    if Tabbox.ActiveTab ~= Tab or not Tabbox.IsOpen then
                         return
                     end
-                    Background.Size = UDim2.new(1, 0, 0, List.AbsoluteContentSize.Y + 53 * Library.DPIScale)
-                end
+                    
+                    local contentHeight = List.AbsoluteContentSize.Y + 53 * Library.DPIScale
+                    local headerHeight = 35 * Library.DPIScale
+                    
+                    local targetContentSize = UDim2.new(1, 0, 0, contentHeight)
+                    local targetBackgroundSize = UDim2.new(1, 0, 0, headerHeight + contentHeight)
 
-                --// Execution \\--
+                    TweenService:Create(ContentHolder, Library.TweenInfo, {Size = targetContentSize}):Play()
+                    TweenService:Create(Background, Library.TweenInfo, {Size = targetBackgroundSize}):Play()
+                end
+                
                 if not Tabbox.ActiveTab then
                     Tab:Show()
                 end
@@ -6226,16 +6297,21 @@ function Library:CreateWindow(WindowInfo)
             else
                 table.insert(Tab.Tabboxes, Tabbox)
             end
-
+            
+            -- Tamanho inicial da TabBox (fechada)
+            Background.Size = UDim2.new(1, 0, 0, 35 * Library.DPIScale)
+            
             return Tabbox
         end
 
-        function Tab:AddLeftTabbox(Name)
-            return Tab:AddTabbox({ Side = 1, Name = Name })
+        function Tab:AddLeftTabbox(Info)
+            Info.Side = 1
+            return Tab:AddTabbox(Info)
         end
 
-        function Tab:AddRightTabbox(Name)
-            return Tab:AddTabbox({ Side = 2, Name = Name })
+        function Tab:AddRightTabbox(Info)
+            Info.Side = 2
+            return Tab:AddTabbox(Info)
         end
 
         function Tab:Hover(Hovering)
@@ -6308,8 +6384,7 @@ function Library:CreateWindow(WindowInfo)
 
             Library.ActiveTab = nil
         end
-
-        --// Execution \\--
+        
         if not Library.ActiveTab then
             Tab:Show()
         end
@@ -6321,214 +6396,6 @@ function Library:CreateWindow(WindowInfo)
             Tab:Hover(false)
         end)
         TabButton.MouseButton1Click:Connect(Tab.Show)
-
-        Library.Tabs[Name] = Tab
-
-        return Tab
-    end
-
-    function Window:AddKeyTab(Name)
-        local TabButton: TextButton
-        local TabLabel
-        local TabIcon
-
-        local TabContainer
-
-        do
-            TabButton = New("TextButton", {
-                BackgroundColor3 = "MainColor",
-                BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 40),
-                Text = "",
-                Parent = Tabs,
-            })
-            New("UIPadding", {
-                PaddingBottom = UDim.new(0, 11),
-                PaddingLeft = UDim.new(0, 12),
-                PaddingRight = UDim.new(0, 12),
-                PaddingTop = UDim.new(0, 11),
-                Parent = TabButton,
-            })
-
-            TabLabel = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(30, 0),
-                Size = UDim2.new(1, -30, 1, 0),
-                Text = Name,
-                TextSize = 16,
-                TextTransparency = 0.5,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = TabButton,
-            })
-
-            if KeyIcon then
-                TabIcon = New("ImageLabel", {
-                    Image = KeyIcon.Url,
-                    ImageColor3 = "AccentColor",
-                    ImageRectOffset = KeyIcon.ImageRectOffset,
-                    ImageRectSize = KeyIcon.ImageRectSize,
-                    ImageTransparency = 0.5,
-                    Size = UDim2.fromScale(1, 1),
-                    SizeConstraint = Enum.SizeConstraint.RelativeYY,
-                    Parent = TabButton,
-                })
-            end
-
-            --// Tab Container \\--
-            TabContainer = New("ScrollingFrame", {
-                AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                CanvasSize = UDim2.fromScale(0, 0),
-                ScrollBarThickness = 0,
-                Size = UDim2.fromScale(1, 1),
-                Visible = false,
-                Parent = Container,
-            })
-            New("UIListLayout", {
-                HorizontalAlignment = Enum.HorizontalAlignment.Center,
-                Padding = UDim.new(0, 8),
-                VerticalAlignment = Enum.VerticalAlignment.Center,
-                Parent = TabContainer,
-            })
-            New("UIPadding", {
-                PaddingLeft = UDim.new(0, 1),
-                PaddingRight = UDim.new(0, 1),
-                Parent = TabContainer,
-            })
-        end
-
-        --// Tab Table \\--
-        local Tab = {
-            Elements = {},
-            IsKeyTab = true,
-        }
-
-        function Tab:AddKeyBox(...)
-            local Data = {}
-
-            local First = select(1, ...)
-
-            if typeof(First) == "function" then
-                Data.Callback = First
-            else
-                Data.ExpectedKey = First
-                Data.Callback = select(2, ...)
-            end
-
-            local Holder = New("Frame", {
-                BackgroundTransparency = 1,
-                Size = UDim2.new(0.75, 0, 0, 21),
-                Parent = TabContainer,
-            })
-
-            local Box = New("TextBox", {
-                BackgroundColor3 = "MainColor",
-                BorderColor3 = "OutlineColor",
-                BorderSizePixel = 1,
-                PlaceholderText = "Key",
-                Size = UDim2.new(1, -71, 1, 0),
-                TextSize = 14,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = Holder,
-            })
-            New("UIPadding", {
-                PaddingLeft = UDim.new(0, 8),
-                PaddingRight = UDim.new(0, 8),
-                Parent = Box,
-            })
-
-            local Button = New("TextButton", {
-                AnchorPoint = Vector2.new(1, 0),
-                BackgroundColor3 = "MainColor",
-                BorderColor3 = "OutlineColor",
-                BorderSizePixel = 1,
-                Position = UDim2.fromScale(1, 0),
-                Size = UDim2.new(0, 63, 1, 0),
-                Text = "Execute",
-                TextSize = 14,
-                Parent = Holder,
-            })
-
-            Button.MouseButton1Click:Connect(function()
-                if Data.ExpectedKey and Box.Text ~= Data.ExpectedKey then
-                    Data.Callback(false, Box.Text)
-                    return
-                end
-
-                Data.Callback(true, Box.Text)
-            end)
-        end
-
-        function Tab:Resize() end
-
-        function Tab:Hover(Hovering)
-            if Library.ActiveTab == Tab then
-                return
-            end
-
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = Hovering and 0.25 or 0.5,
-            }):Play()
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = Hovering and 0.25 or 0.5,
-                }):Play()
-            end
-        end
-
-        function Tab:Show()
-            if Library.ActiveTab then
-                Library.ActiveTab:Hide()
-            end
-
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 0,
-            }):Play()
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0,
-            }):Play()
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = 0,
-                }):Play()
-            end
-            TabContainer.Visible = true
-
-            Library.ActiveTab = Tab
-        end
-
-        function Tab:Hide()
-            TweenService:Create(TabButton, Library.TweenInfo, {
-                BackgroundTransparency = 1,
-            }):Play()
-            TweenService:Create(TabLabel, Library.TweenInfo, {
-                TextTransparency = 0.5,
-            }):Play()
-            if TabIcon then
-                TweenService:Create(TabIcon, Library.TweenInfo, {
-                    ImageTransparency = 0.5,
-                }):Play()
-            end
-            TabContainer.Visible = false
-
-            Library.ActiveTab = nil
-        end
-
-        --// Execution \\--
-        if not Library.ActiveTab then
-            Tab:Show()
-        end
-
-        TabButton.MouseEnter:Connect(function()
-            Tab:Hover(true)
-        end)
-        TabButton.MouseLeave:Connect(function()
-            Tab:Hover(false)
-        end)
-        TabButton.MouseButton1Click:Connect(Tab.Show)
-
-        Tab.Container = TabContainer
-        setmetatable(Tab, BaseGroupbox)
 
         Library.Tabs[Name] = Tab
 
