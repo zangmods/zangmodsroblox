@@ -5355,31 +5355,29 @@ function Library:CreateWindow(WindowInfo)
         })
         Library:MakeDraggable(MainFrame, TopBar, false, true)
 
-        --// MODIFICAÇÃO: O antigo "TitleHolder" agora é o "IconHolder".
         local IconHolder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(0, 60, 1, 0), -- Largura fixa de 60px para alinhar com a barra de abas.
+            Size = UDim2.new(0, 60, 1, 0),
             Parent = TopBar,
         })
         
-        -- O texto do título foi removido. Apenas o ícone principal é criado aqui.
         if WindowInfo.Icon then
             New("ImageLabel", {
                 AnchorPoint = Vector2.new(0.5, 0.5),
                 Position = UDim2.fromScale(0.5, 0.5),
                 Image = if tonumber(WindowInfo.Icon) then string.format("rbxassetid://%d", WindowInfo.Icon) else WindowInfo.Icon,
-                Size = UDim2.new(1, -20, 1, -20), -- Ícone preenche o espaço com uma margem de 10px.
+                Size = UDim2.new(1, -20, 1, -20),
                 Parent = IconHolder,
             })
         end
         
         --// Top Right Bar
-        -- MODIFICAÇÃO: Posição e tamanho ajustados para o novo layout sem título.
+        -- MODIFICAÇÃO: Posição e tamanho ajustados para criar um espaçamento.
         local RightWrapper = New("Frame", {
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 60, 0.5, 0), -- Inicia logo após o IconHolder.
-            Size = UDim2.new(1, -117, 1, -16), -- Ocupa o resto do espaço.
+            Position = UDim2.new(0, 68, 0.5, 0), -- Posição movida para a direita (de 60 para 68).
+            Size = UDim2.new(1, -125, 1, -16), -- Tamanho ajustado para compensar a nova posição.
             Parent = TopBar,
         })
 
@@ -5558,12 +5556,12 @@ function Library:CreateWindow(WindowInfo)
             CanvasSize = UDim2.fromScale(0, 0),
             Position = UDim2.fromOffset(0, 49),
             ScrollBarThickness = 0,
-            Size = UDim2.new(0, 60, 1, -70), -- Largura fixa de 60 pixels
+            Size = UDim2.new(0, 60, 1, -70),
             Parent = MainFrame,
         })
 
         New("UIListLayout", {
-            HorizontalAlignment = Enum.HorizontalAlignment.Center, -- Centraliza os botões
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
             Parent = Tabs,
         })
 
@@ -5575,7 +5573,7 @@ function Library:CreateWindow(WindowInfo)
             end,
             Name = "Container",
             Position = UDim2.new(1, 0, 0, 49),
-            Size = UDim2.new(1, -61, 1, -70), -- Posição e tamanho ajustados
+            Size = UDim2.new(1, -61, 1, -70),
             Parent = MainFrame,
         })
 
@@ -5588,7 +5586,6 @@ function Library:CreateWindow(WindowInfo)
         })
     end
     
-    -- O resto da função continua igual...
     local Window = {}
 
     function Window:AddTab(...)
@@ -5609,6 +5606,7 @@ function Library:CreateWindow(WindowInfo)
 
         local TabButton: TextButton
         local TabIcon
+        local SelectionIndicator -- MODIFICAÇÃO: Variável para o indicador
 
         local TabContainer
         local TabLeft
@@ -5629,6 +5627,17 @@ function Library:CreateWindow(WindowInfo)
                 Text = "",
                 Parent = Tabs,
             })
+            
+            -- MODIFICAÇÃO: Criação do indicador de aba ativa.
+            SelectionIndicator = New("Frame", {
+                BackgroundColor3 = "AccentColor",
+                BorderSizePixel = 0,
+                Position = UDim2.fromScale(0, 0),
+                Size = UDim2.new(0, 3, 1, 0), -- Barra vertical de 3 pixels de largura.
+                Visible = false, -- Começa invisível.
+                Parent = TabButton,
+            })
+            New("UICorner", { CornerRadius = UDim.new(0, 3), Parent = SelectionIndicator })
 
             if Icon then
                 TabIcon = New("ImageLabel", {
@@ -5644,6 +5653,7 @@ function Library:CreateWindow(WindowInfo)
                 })
             end
 
+            -- O resto da criação da aba continua igual...
             TabContainer = New("Frame", {
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 1),
@@ -5773,6 +5783,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         local Tab = {
+            Indicator = SelectionIndicator, -- MODIFICAÇÃO: Armazena a referência ao indicador.
             Groupboxes = {},
             Tabboxes = {},
             DependencyGroupboxes = {},
@@ -6204,6 +6215,9 @@ function Library:CreateWindow(WindowInfo)
             if Library.ActiveTab then
                 Library.ActiveTab:Hide()
             end
+            
+            -- MODIFICAÇÃO: Torna o indicador visível.
+            Tab.Indicator.Visible = true
 
             TweenService:Create(TabButton, Library.TweenInfo, {
                 BackgroundTransparency = 0,
@@ -6240,6 +6254,9 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
+            -- MODIFICAÇÃO: Esconde o indicador.
+            Tab.Indicator.Visible = false
+
             TweenService:Create(TabButton, Library.TweenInfo, {
                 BackgroundTransparency = 1,
             }):Play()
@@ -6279,6 +6296,7 @@ function Library:CreateWindow(WindowInfo)
     function Window:AddKeyTab(Name)
         local TabButton: TextButton
         local TabIcon
+        local SelectionIndicator -- MODIFICAÇÃO: Variável para o indicador da KeyTab
         local TabContainer
 
         do
@@ -6289,6 +6307,17 @@ function Library:CreateWindow(WindowInfo)
                 Text = "",
                 Parent = Tabs,
             })
+            
+            -- MODIFICAÇÃO: Adiciona o indicador também para a KeyTab.
+            SelectionIndicator = New("Frame", {
+                BackgroundColor3 = "AccentColor",
+                BorderSizePixel = 0,
+                Position = UDim2.fromScale(0, 0),
+                Size = UDim2.new(0, 3, 1, 0),
+                Visible = false,
+                Parent = TabButton,
+            })
+            New("UICorner", { CornerRadius = UDim.new(0, 3), Parent = SelectionIndicator })
             
             if KeyIcon then
                 TabIcon = New("ImageLabel", {
@@ -6327,6 +6356,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         local Tab = {
+            Indicator = SelectionIndicator, -- MODIFICAÇÃO: Armazena a referência.
             Elements = {},
             IsKeyTab = true,
         }
@@ -6406,6 +6436,8 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveTab:Hide()
             end
             
+            Tab.Indicator.Visible = true -- MODIFICAÇÃO: Mostra o indicador.
+
             CurrentTabInfo.Visible = true
             if IsDefaultSearchbarSize then
                 SearchBox.Size = UDim2.fromScale(0.5, 1)
@@ -6429,6 +6461,8 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
+            Tab.Indicator.Visible = false -- MODIFICAÇÃO: Esconde o indicador.
+
             CurrentTabInfo.Visible = false
             if IsDefaultSearchbarSize then
                 SearchBox.Size = UDim2.fromScale(1, 1)
@@ -6528,7 +6562,6 @@ function Library:CreateWindow(WindowInfo)
 
     return Window
 end
-
 local function OnPlayerChange()
     local PlayerList, ExcludedPlayerList = GetPlayers(), GetPlayers(true)
 
