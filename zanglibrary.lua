@@ -5907,7 +5907,7 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
-        function Tab:AddGroupbox(Info)
+                function Tab:AddGroupbox(Info)
             local BoxHolder = New("Frame", {
                 AutomaticSize = Enum.AutomaticSize.Y,
                 BackgroundTransparency = 1,
@@ -5926,10 +5926,10 @@ function Library:CreateWindow(WindowInfo)
             })
 
             local GroupboxHolder
-            local GroupboxLabel
-
+            local GroupboxHeader
             local GroupboxContainer
             local GroupboxList
+            local Arrow
 
             do
                 GroupboxHolder = New("Frame", {
@@ -5946,6 +5946,14 @@ function Library:CreateWindow(WindowInfo)
                     Position = UDim2.fromOffset(0, 34),
                     Size = UDim2.new(1, 0, 0, 1),
                 })
+                
+                -- Cabeçalho clicável
+                GroupboxHeader = New("TextButton", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 34),
+                    Text = "",
+                    Parent = GroupboxHolder,
+                })
 
                 local BoxIcon = Library:GetCustomIcon(Info.IconName)
                 if BoxIcon then
@@ -5956,29 +5964,43 @@ function Library:CreateWindow(WindowInfo)
                         ImageRectSize = BoxIcon.ImageRectSize,
                         Position = UDim2.fromOffset(6, 6),
                         Size = UDim2.fromOffset(22, 22),
-                        Parent = GroupboxHolder,
+                        Parent = GroupboxHeader,
                     })
                 end
 
-                GroupboxLabel = New("TextLabel", {
+                local HeaderLabel = New("TextLabel", {
                     BackgroundTransparency = 1,
                     Position = UDim2.fromOffset(BoxIcon and 24 or 0, 0),
                     Size = UDim2.new(1, 0, 0, 34),
                     Text = Info.Name,
                     TextSize = 15,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Parent = GroupboxHolder,
+                    Parent = GroupboxHeader,
                 })
                 New("UIPadding", {
                     PaddingLeft = UDim.new(0, 12),
                     PaddingRight = UDim.new(0, 12),
-                    Parent = GroupboxLabel,
+                    Parent = HeaderLabel,
+                })
+                
+                -- Ícone de seta para indicar o estado (aberto/fechado)
+                Arrow = New("ImageLabel", {
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    Image = ArrowIcon and ArrowIcon.Url or "",
+                    ImageColor3 = "FontColor",
+                    ImageRectOffset = ArrowIcon and ArrowIcon.ImageRectOffset or Vector2.zero,
+                    ImageRectSize = ArrowIcon and ArrowIcon.ImageRectSize or Vector2.zero,
+                    Position = UDim2.new(1, -6, 0.5, 0),
+                    Size = UDim2.fromOffset(22, 22),
+                    Rotation = 180, -- Começa fechado (seta para baixo)
+                    Parent = GroupboxHeader,
                 })
 
                 GroupboxContainer = New("Frame", {
                     BackgroundTransparency = 1,
+                    ClipsDescendants = true, -- Essencial para a animação de "gaveta"
                     Position = UDim2.fromOffset(0, 35),
-                    Size = UDim2.new(1, 0, 1, -35),
+                    Size = UDim2.new(1, 0, 0, 0), -- Começa com altura zero
                     Parent = GroupboxHolder,
                 })
 
@@ -5999,19 +6021,50 @@ function Library:CreateWindow(WindowInfo)
                 BoxHolder = BoxHolder,
                 Holder = Background,
                 Container = GroupboxContainer,
-
                 Tab = Tab,
                 DependencyBoxes = {},
                 Elements = {},
+                IsOpen = false, -- Novo estado para controlar se está aberto ou fechado
             }
 
+            -- Nova função para abrir/fechar a gaveta
+            function Groupbox:Toggle()
+                Groupbox.IsOpen = not Groupbox.IsOpen
+
+                local contentHeight = GroupboxList.AbsoluteContentSize.Y + (14 * Library.DPIScale)
+                local headerHeight = 35 * Library.DPIScale
+
+                local targetContainerSize = UDim2.new(1, 0, 0, Groupbox.IsOpen and contentHeight or 0)
+                local targetBackgroundSize = UDim2.new(1, 0, 0, Groupbox.IsOpen and headerHeight + contentHeight or headerHeight)
+                
+                -- Animações
+                TweenService:Create(Arrow, Library.TweenInfo, {Rotation = Groupbox.IsOpen and 0 or 180}):Play()
+                TweenService:Create(GroupboxContainer, Library.TweenInfo, {Size = targetContainerSize}):Play()
+                TweenService:Create(Background, Library.TweenInfo, {Size = targetBackgroundSize}):Play()
+            end
+
+            -- Conecta o clique do cabeçalho à função Toggle
+            GroupboxHeader.MouseButton1Click:Connect(Groupbox.Toggle)
+
+            -- Função Resize modificada para atualizar o tamanho apenas se a gaveta estiver aberta
             function Groupbox:Resize()
-                Background.Size = UDim2.new(1, 0, 0, GroupboxList.AbsoluteContentSize.Y + 53 * Library.DPIScale)
+                if Groupbox.IsOpen then
+                    local contentHeight = GroupboxList.AbsoluteContentSize.Y + (14 * Library.DPIScale)
+                    local headerHeight = 35 * Library.DPIScale
+                    
+                    local targetBackgroundSize = UDim2.new(1, 0, 0, headerHeight + contentHeight)
+                    local targetContainerSize = UDim2.new(1, 0, 0, contentHeight)
+
+                    TweenService:Create(GroupboxContainer, Library.TweenInfo, {Size = targetContainerSize}):Play()
+                    TweenService:Create(Background, Library.TweenInfo, {Size = targetBackgroundSize}):Play()
+                end
             end
 
             setmetatable(Groupbox, BaseGroupbox)
 
-            Groupbox:Resize()
+            -- Define o tamanho inicial (fechado)
+            Background.Size = UDim2.new(1, 0, 0, 35 * Library.DPIScale)
+            
             Tab.Groupboxes[Info.Name] = Groupbox
 
             return Groupbox
