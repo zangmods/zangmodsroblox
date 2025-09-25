@@ -5400,16 +5400,18 @@ function Library:CreateWindow(WindowInfo)
             Parent = TopBar,
         })
 
+        -- MODIFICADO: Layout alterado para 'SpaceBetween' para alinhar o nome à esquerda e a busca à direita.
         New("UIListLayout", {
             FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = Enum.HorizontalAlignment.Right,
+            HorizontalFlex = Enum.UIFlexAlignment.SpaceBetween,
             VerticalAlignment = Enum.VerticalAlignment.Center,
-            Padding = UDim.new(0, 8),
             Parent = RightWrapper,
         })
 
+        -- MODIFICADO: Tamanho alterado para ser automático e se ajustar ao texto.
         CurrentTabInfo = New("Frame", {
-            Size = UDim2.fromScale(WindowInfo.DisableSearch and 1 or 0.5, 1),
+            Size = UDim2.fromScale(0, 1),
+            AutomaticSize = Enum.AutomaticSize.X,
             Visible = false,
             BackgroundTransparency = 1,
             Parent = RightWrapper,
@@ -5452,11 +5454,11 @@ function Library:CreateWindow(WindowInfo)
             Parent = CurrentTabInfo,
         })
 
+        -- MODIFICADO: Largura da barra de pesquisa diminuída e propriedade 'TextScaled' removida.
         SearchBox = New("TextBox", {
             BackgroundColor3 = "MainColor",
             PlaceholderText = "Search",
-            Size = WindowInfo.SearchbarSize,
-            TextScaled = true,
+            Size = UDim2.new(0, 200, 1, 0),
             Visible = not (WindowInfo.DisableSearch or false),
             Parent = RightWrapper,
         })
@@ -5655,7 +5657,9 @@ function Library:CreateWindow(WindowInfo)
                 Parent = TabButton,
             })
 
+            -- MODIFICADO: Rótulo de texto da aba tornado invisível.
             TabLabel = New("TextLabel", {
+                Visible = false,
                 BackgroundTransparency = 1,
                 Position = UDim2.fromOffset(30, 0),
                 Size = UDim2.new(1, -30, 1, 0),
@@ -5667,7 +5671,10 @@ function Library:CreateWindow(WindowInfo)
             })
 
             if Icon then
+                -- MODIFICADO: Ícone centralizado no botão da aba.
                 TabIcon = New("ImageLabel", {
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.fromScale(0.5, 0.5),
                     Image = Icon.Url,
                     ImageColor3 = Icon.Custom and "White" or "AccentColor",
                     ImageRectOffset = Icon.ImageRectOffset,
@@ -6273,9 +6280,10 @@ function Library:CreateWindow(WindowInfo)
             if Description then
                 CurrentTabInfo.Visible = true
                 
-                if IsDefaultSearchbarSize then
-                    SearchBox.Size = UDim2.fromScale(0.5, 1)
-                end
+                -- MODIFICADO: Bloco que redimensionava a barra de pesquisa removido.
+                -- if IsDefaultSearchbarSize then
+                --     SearchBox.Size = UDim2.fromScale(0.5, 1)
+                -- end
 
                 CurrentTabLabel.Text = Name
                 CurrentTabDescription.Text = Description
@@ -6300,9 +6308,10 @@ function Library:CreateWindow(WindowInfo)
             end
             TabContainer.Visible = false
 
-            if IsDefaultSearchbarSize then
-                SearchBox.Size = UDim2.fromScale(1, 1)
-            end
+            -- MODIFICADO: Bloco que redimensionava a barra de pesquisa removido.
+            -- if IsDefaultSearchbarSize then
+            --     SearchBox.Size = UDim2.fromScale(1, 1)
+            -- end
             
             CurrentTabInfo.Visible = false
 
