@@ -1,4 +1,4 @@
-local cloneref = (cloneref or clonereference or function(instance: any)
+-- local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
 local CoreGui: CoreGui = cloneref(game:GetService("CoreGui"))
@@ -27,6 +27,9 @@ local Buttons = {}
 local Toggles = {}
 local Options = {}
 
+-- MODIFICAÇÃO: Variável para controlar o tempo da animação das abas
+local tabHideDebounce = nil
+
 local Library = {
     LocalPlayer = LocalPlayer,
     DevicePlatform = nil,
@@ -50,7 +53,7 @@ local Library = {
     Notifications = {},
 
     ToggleKeybind = Enum.KeyCode.RightControl,
-    TweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    TweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), -- Um pouco mais suave
     NotifyTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
     Toggled = false,
@@ -5371,13 +5374,11 @@ function Library:CreateWindow(WindowInfo)
             })
         end
         
-        --// Top Right Bar
-        -- MODIFICAÇÃO: Posição e tamanho ajustados para criar um espaçamento.
         local RightWrapper = New("Frame", {
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 68, 0.5, 0), -- Posição movida para a direita (de 60 para 68).
-            Size = UDim2.new(1, -125, 1, -16), -- Tamanho ajustado para compensar a nova posição.
+            Position = UDim2.new(0, 68, 0.5, 0),
+            Size = UDim2.new(1, -125, 1, -16),
             Parent = TopBar,
         })
 
@@ -5533,7 +5534,9 @@ function Library:CreateWindow(WindowInfo)
 
             Library:MakeResizable(MainFrame, ResizeButton, function()
                 for _, Tab in pairs(Library.Tabs) do
-                    Tab:Resize(true)
+                    if not Tab.IsKeyTab then
+                        Tab:Resize(true)
+                    end
                 end
             end)
         end
@@ -5559,7 +5562,6 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.new(0, 60, 1, -70),
             Parent = MainFrame,
         })
-
         New("UIListLayout", {
             HorizontalAlignment = Enum.HorizontalAlignment.Center,
             Parent = Tabs,
@@ -5576,7 +5578,6 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.new(1, -61, 1, -70),
             Parent = MainFrame,
         })
-
         New("UIPadding", {
             PaddingBottom = UDim.new(0, 0),
             PaddingLeft = UDim.new(0, 6),
@@ -5588,6 +5589,7 @@ function Library:CreateWindow(WindowInfo)
     
     local Window = {}
 
+    -- MODIFICAÇÃO: A função Window:AddTab foi completamente substituída.
     function Window:AddTab(...)
         local Name = nil
         local Icon = nil
@@ -5606,12 +5608,13 @@ function Library:CreateWindow(WindowInfo)
 
         local TabButton: TextButton
         local TabIcon
-        local SelectionIndicator -- MODIFICAÇÃO: Variável para o indicador
+        local TabNameLabel
+        local SelectionIndicator
 
         local TabContainer
         local TabLeft
         local TabRight
-		
+        
         local WarningBox
         local WarningBoxScrollingFrame
         local WarningTitle
@@ -5625,35 +5628,49 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundTransparency = 1,
                 Size = UDim2.new(0, 48, 0, 48),
                 Text = "",
+                ClipsDescendants = true,
                 Parent = Tabs,
             })
             
-            -- MODIFICAÇÃO: Criação do indicador de aba ativa.
             SelectionIndicator = New("Frame", {
                 BackgroundColor3 = "AccentColor",
                 BorderSizePixel = 0,
                 Position = UDim2.fromScale(0, 0),
-                Size = UDim2.new(0, 3, 1, 0), -- Barra vertical de 3 pixels de largura.
-                Visible = false, -- Começa invisível.
+                Size = UDim2.new(0, 3, 1, 0),
+                Visible = false,
                 Parent = TabButton,
             })
             New("UICorner", { CornerRadius = UDim.new(0, 3), Parent = SelectionIndicator })
 
             if Icon then
                 TabIcon = New("ImageLabel", {
-                    AnchorPoint = Vector2.new(0.5, 0.5),
-                    Position = UDim2.fromScale(0.5, 0.5),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Position = UDim2.new(0, 8, 0.5, 0),
                     Image = Icon.Url,
                     ImageColor3 = Icon.Custom and "White" or "AccentColor",
                     ImageRectOffset = Icon.ImageRectOffset,
                     ImageRectSize = Icon.ImageRectSize,
                     ImageTransparency = 0.5,
-                    Size = UDim2.new(1, -16, 1, -16),
+                    Size = UDim2.fromOffset(32, 32),
                     Parent = TabButton,
                 })
             end
 
-            -- O resto da criação da aba continua igual...
+            TabNameLabel = New("TextLabel", {
+                Name = "TabNameLabel",
+                AnchorPoint = Vector2.new(0, 0.5),
+                Position = UDim2.new(0, 48, 0.5, 0),
+                Size = UDim2.new(1, -52, 1, 0),
+                BackgroundTransparency = 1,
+                Font = Library.Scheme.Font,
+                Text = Name,
+                TextColor3 = Library.Scheme.FontColor,
+                TextSize = 14,
+                TextTransparency = 1,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = TabButton
+            })
+
             TabContainer = New("Frame", {
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 1),
@@ -5783,7 +5800,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         local Tab = {
-            Indicator = SelectionIndicator, -- MODIFICAÇÃO: Armazena a referência ao indicador.
+            Indicator = SelectionIndicator,
             Groupboxes = {},
             Tabboxes = {},
             DependencyGroupboxes = {},
@@ -5797,7 +5814,9 @@ function Library:CreateWindow(WindowInfo)
                 Visible = false,
                 Title = "WARNING",
                 Text = ""
-            }
+            },
+            Button = TabButton,
+            NameLabel = TabNameLabel
         }
 
         function Tab:UpdateWarningBox(Info)
@@ -6211,12 +6230,42 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
+        local function AnimateAndShowNames()
+            if tabHideDebounce then
+                task.cancel(tabHideDebounce)
+                tabHideDebounce = nil
+            end
+
+            for _, tabItem in pairs(Library.Tabs) do
+                if tabItem.Button and tabItem.NameLabel and not tabItem.IsKeyTab then
+                    TweenService:Create(tabItem.Button, Library.TweenInfo, {
+                        Size = UDim2.new(0, 150, 0, 48)
+                    }):Play()
+                    TweenService:Create(tabItem.NameLabel, Library.TweenInfo, {
+                        TextTransparency = 0
+                    }):Play()
+                end
+            end
+        end
+
+        local function HideNames()
+            for _, tabItem in pairs(Library.Tabs) do
+                 if tabItem.Button and tabItem.NameLabel and not tabItem.IsKeyTab then
+                    TweenService:Create(tabItem.Button, Library.TweenInfo, {
+                        Size = UDim2.new(0, 48, 0, 48)
+                    }):Play()
+                    TweenService:Create(tabItem.NameLabel, Library.TweenInfo, {
+                        TextTransparency = 1
+                    }):Play()
+                 end
+            end
+        end
+
         function Tab:Show()
             if Library.ActiveTab then
                 Library.ActiveTab:Hide()
             end
             
-            -- MODIFICAÇÃO: Torna o indicador visível.
             Tab.Indicator.Visible = true
 
             TweenService:Create(TabButton, Library.TweenInfo, {
@@ -6249,12 +6298,10 @@ function Library:CreateWindow(WindowInfo)
             end
 
             TabContainer.Visible = true
-
             Library.ActiveTab = Tab
         end
 
         function Tab:Hide()
-            -- MODIFICAÇÃO: Esconde o indicador.
             Tab.Indicator.Visible = false
 
             TweenService:Create(TabButton, Library.TweenInfo, {
@@ -6272,7 +6319,6 @@ function Library:CreateWindow(WindowInfo)
             end
             
             CurrentTabInfo.Visible = false
-
             Library.ActiveTab = nil
         end
 
@@ -6286,9 +6332,21 @@ function Library:CreateWindow(WindowInfo)
         TabButton.MouseLeave:Connect(function()
             Tab:Hover(false)
         end)
-        TabButton.MouseButton1Click:Connect(Tab.Show)
+        
+        TabButton.MouseButton1Click:Connect(function()
+            Tab:Show()
+            AnimateAndShowNames()
+            
+            tabHideDebounce = task.delay(3, function()
+                HideNames()
+                tabHideDebounce = nil
+            end)
+        end)
 
         Library.Tabs[Name] = Tab
+
+        task.wait()
+        HideNames()
 
         return Tab
     end
@@ -6296,7 +6354,7 @@ function Library:CreateWindow(WindowInfo)
     function Window:AddKeyTab(Name)
         local TabButton: TextButton
         local TabIcon
-        local SelectionIndicator -- MODIFICAÇÃO: Variável para o indicador da KeyTab
+        local SelectionIndicator
         local TabContainer
 
         do
@@ -6308,7 +6366,6 @@ function Library:CreateWindow(WindowInfo)
                 Parent = Tabs,
             })
             
-            -- MODIFICAÇÃO: Adiciona o indicador também para a KeyTab.
             SelectionIndicator = New("Frame", {
                 BackgroundColor3 = "AccentColor",
                 BorderSizePixel = 0,
@@ -6356,7 +6413,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         local Tab = {
-            Indicator = SelectionIndicator, -- MODIFICAÇÃO: Armazena a referência.
+            Indicator = SelectionIndicator,
             Elements = {},
             IsKeyTab = true,
         }
@@ -6436,7 +6493,7 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveTab:Hide()
             end
             
-            Tab.Indicator.Visible = true -- MODIFICAÇÃO: Mostra o indicador.
+            Tab.Indicator.Visible = true
 
             CurrentTabInfo.Visible = true
             if IsDefaultSearchbarSize then
@@ -6461,7 +6518,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
-            Tab.Indicator.Visible = false -- MODIFICAÇÃO: Esconde o indicador.
+            Tab.Indicator.Visible = false
 
             CurrentTabInfo.Visible = false
             if IsDefaultSearchbarSize then
