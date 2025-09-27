@@ -5281,12 +5281,16 @@ function Library:CreateWindow(WindowInfo)
     local Tabs
     local Container
     
-    -- MODIFICAÇÃO: Variáveis para controlar a animação de expansão das abas
+    -- MODIFICAÇÃO: Variáveis para controlar a animação
     local areTabsExpanded = false
     local collapseCoroutine = nil
     local originalTabsWidth, expandedTabsWidth = 60, 170
     local originalTabButtonSize = UDim2.new(0, 48, 0, 48)
     local expandedTabButtonSize = UDim2.new(0, 160, 0, 48)
+    
+    -- MODIFICAÇÃO: Referências para elementos que precisam ser animados
+    local verticalDivider
+    local RightWrapper
 
     do
         Library.KeybindFrame, Library.KeybindContainer = Library:AddDraggableMenu("Keybinds")
@@ -5313,28 +5317,19 @@ function Library:CreateWindow(WindowInfo)
             },
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, WindowInfo.CornerRadius - 1),
+            CornerRadius = UDim2.new(0, WindowInfo.CornerRadius - 1),
             Parent = MainFrame,
         })
         do
-            local Lines = {
-                {
-                    Position = UDim2.fromOffset(0, 48),
-                    Size = UDim2.new(1, 0, 0, 1),
-                },
-                {
-                    Position = UDim2.fromOffset(originalTabsWidth, 0),
-                    Size = UDim2.new(0, 1, 1, -21),
-                },
-                {
-                    AnchorPoint = Vector2.new(0, 1),
-                    Position = UDim2.new(0, 0, 1, -20),
-                    Size = UDim2.new(1, 0, 0, 1),
-                },
-            }
-            for _, Info in pairs(Lines) do
-                Library:MakeLine(MainFrame, Info)
-            end
+            -- MODIFICAÇÃO: Criando a linha vertical com uma referência
+            Library:MakeLine(MainFrame, { Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 1) })
+            Library:MakeLine(MainFrame, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -20), Size = UDim2.new(1, 0, 0, 1) })
+            
+            verticalDivider = Library:MakeLine(MainFrame, {
+                Position = UDim2.fromOffset(originalTabsWidth, 0),
+                Size = UDim2.new(0, 1, 1, -21),
+            })
+
             Library:MakeOutline(MainFrame, WindowInfo.CornerRadius, 0)
         end
 
@@ -5379,7 +5374,8 @@ function Library:CreateWindow(WindowInfo)
             })
         end
         
-        local RightWrapper = New("Frame", {
+        -- MODIFICAÇÃO: Criando o RightWrapper com uma referência
+        RightWrapper = New("Frame", {
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0, 0.5),
             Position = UDim2.new(0, originalTabsWidth + 8, 0.5, 0),
@@ -5448,7 +5444,7 @@ function Library:CreateWindow(WindowInfo)
             Parent = RightWrapper,
         })
         New("UICorner", {
-            CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+            CornerRadius = UDim2.new(0, WindowInfo.CornerRadius),
             Parent = SearchBox,
         })
         New("UIPadding", {
@@ -5511,7 +5507,7 @@ function Library:CreateWindow(WindowInfo)
             })
         end
         New("UICorner", {
-            CornerRadius = UDim.new(0, WindowInfo.CornerRadius - 1),
+            CornerRadius = UDim2.new(0, WindowInfo.CornerRadius - 1),
             Parent = BottomBar,
         })
 
@@ -5562,7 +5558,7 @@ function Library:CreateWindow(WindowInfo)
             ScrollBarThickness = 0,
             Size = UDim2.new(0, originalTabsWidth, 1, -70),
             Parent = MainFrame,
-            ZIndex = 2, -- Para que as abas expandidas fiquem sobre o conteúdo
+            ZIndex = 2,
         })
 
         New("UIListLayout", {
@@ -5572,12 +5568,12 @@ function Library:CreateWindow(WindowInfo)
 
         --// Container \\--
         Container = New("Frame", {
-            AnchorPoint = Vector2.new(1, 0),
+            AnchorPoint = Vector2.new(0, 0), -- MODIFICAÇÃO: AnchorPoint para facilitar o posicionamento
             BackgroundColor3 = function()
                 return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
             end,
             Name = "Container",
-            Position = UDim2.new(1, 0, 0, 49),
+            Position = UDim2.new(0, originalTabsWidth + 1, 0, 49), -- MODIFICAÇÃO: Posição inicial correta
             Size = UDim2.new(1, -(originalTabsWidth + 1), 1, -70),
             Parent = MainFrame,
         })
@@ -5591,7 +5587,7 @@ function Library:CreateWindow(WindowInfo)
         })
     end
     
-    -- MODIFICAÇÃO: Função para animar a expansão e retração das abas
+    -- MODIFICAÇÃO: Função de animação aprimorada
     local function AnimateTabs()
         if collapseCoroutine then
             task.cancel(collapseCoroutine)
@@ -5601,9 +5597,18 @@ function Library:CreateWindow(WindowInfo)
         local wasAlreadyExpanded = areTabsExpanded
         areTabsExpanded = true
 
-        -- Só executa a animação de expansão se não estiverem já expandidas
         if not wasAlreadyExpanded then
+            -- Anima a expansão de todos os elementos necessários
             TweenService:Create(Tabs, Library.TweenInfo, { Size = UDim2.new(0, expandedTabsWidth, 1, -70) }):Play()
+            TweenService:Create(Container, Library.TweenInfo, { 
+                Position = UDim2.new(0, expandedTabsWidth + 1, 0, 49),
+                Size = UDim2.new(1, -(expandedTabsWidth + 1), 1, -70) 
+            }):Play()
+            TweenService:Create(verticalDivider, Library.TweenInfo, { Position = UDim2.fromOffset(expandedTabsWidth, 0) }):Play()
+            TweenService:Create(RightWrapper, Library.TweenInfo, { 
+                Position = UDim2.new(0, expandedTabsWidth + 8, 0.5, 0),
+                Size = UDim2.new(1, -(expandedTabsWidth + 65), 1, -16)
+            }):Play()
 
             for _, tab in pairs(Library.Tabs) do
                 if tab.Button and tab.NameLabel then
@@ -5614,12 +5619,21 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
-        -- Agenda a retração
         collapseCoroutine = task.delay(3, function()
-            if not areTabsExpanded then return end -- Prevenção de execução dupla
+            if not areTabsExpanded then return end
             
             areTabsExpanded = false
+            -- Anima a retração de todos os elementos
             TweenService:Create(Tabs, Library.TweenInfo, { Size = UDim2.new(0, originalTabsWidth, 1, -70) }):Play()
+            TweenService:Create(Container, Library.TweenInfo, { 
+                Position = UDim2.new(0, originalTabsWidth + 1, 0, 49),
+                Size = UDim2.new(1, -(originalTabsWidth + 1), 1, -70) 
+            }):Play()
+            TweenService:Create(verticalDivider, Library.TweenInfo, { Position = UDim2.fromOffset(originalTabsWidth, 0) }):Play()
+            TweenService:Create(RightWrapper, Library.TweenInfo, {
+                Position = UDim2.new(0, originalTabsWidth + 8, 0.5, 0),
+                Size = UDim2.new(1, -(originalTabsWidth + 65), 1, -16)
+            }):Play()
 
             for _, tab in pairs(Library.Tabs) do
                 if tab.Button and tab.NameLabel then
@@ -5693,18 +5707,17 @@ function Library:CreateWindow(WindowInfo)
             if Icon then
                 TabIcon = New("ImageLabel", {
                     AnchorPoint = Vector2.new(0.5, 0.5),
-                    Position = UDim2.new(0, 24, 0.5, 0), -- Centraliza nos primeiros 48px
+                    Position = UDim2.new(0, 24, 0.5, 0),
                     Image = Icon.Url,
                     ImageColor3 = Icon.Custom and "White" or "AccentColor",
                     ImageRectOffset = Icon.ImageRectOffset,
                     ImageRectSize = Icon.ImageRectSize,
                     ImageTransparency = 0.5,
-                    Size = UDim2.fromOffset(32, 32), -- Tamanho fixo para o ícone
+                    Size = UDim2.fromOffset(32, 32),
                     Parent = TabButton,
                 })
             end
             
-            -- MODIFICAÇÃO: Adiciona a label para o nome da aba
             TabNameLabel = New("TextLabel", {
                 Name = "TabName",
                 AnchorPoint = Vector2.new(0, 0.5),
@@ -5713,9 +5726,9 @@ function Library:CreateWindow(WindowInfo)
                 BackgroundTransparency = 1,
                 Text = Name,
                 TextSize = 14,
-                TextTransparency = 1, -- Começa invisível
+                TextTransparency = 1,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                Visible = false, -- Começa escondida
+                Visible = false,
                 Parent = TabButton,
             })
 
@@ -5749,7 +5762,7 @@ function Library:CreateWindow(WindowInfo)
                     Parent = TabLeft,
                 })
 
-                TabLeft.Size = UDim2.new(0, math.floor(TabContainer.AbsoluteSize.X / 2) - 3, 1, 0)
+                TabLeft.Size = UDim2.new(0.5, -3, 1, 0)
                 Library:UpdateDPI(TabLeft, { Size = TabLeft.Size })
             end
 
@@ -5778,7 +5791,7 @@ function Library:CreateWindow(WindowInfo)
                     Parent = TabRight,
                 })
 
-                TabRight.Size = UDim2.new(0, math.floor(TabContainer.AbsoluteSize.X / 2) - 3, 1, 0)
+                TabRight.Size = UDim2.new(0.5, -3, 1, 0)
                 Library:UpdateDPI(TabRight, { Size = TabRight.Size })
             end
 
@@ -5939,7 +5952,7 @@ function Library:CreateWindow(WindowInfo)
             local Offset = WarningBox.Visible and WarningBox.AbsoluteSize.Y + 6 or 0
             for _, Side in pairs(Tab.Sides) do
                 Side.Position = UDim2.new(Side.Position.X.Scale, 0, 0, Offset)
-                Side.Size = UDim2.new(0, math.floor(TabContainer.AbsoluteSize.X / 2) - 3, 1, -Offset)
+                Side.Size = UDim2.new(Side.Size.X.Scale, -3, 1, -Offset)
                 Library:UpdateDPI(Side, {
                     Position = Side.Position,
                     Size = Side.Size,
@@ -6402,7 +6415,6 @@ function Library:CreateWindow(WindowInfo)
                 })
             end
 
-            -- MODIFICAÇÃO: Adiciona a label para o nome da aba
             TabNameLabel = New("TextLabel", {
                 Name = "TabName",
                 AnchorPoint = Vector2.new(0, 0.5),
