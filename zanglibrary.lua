@@ -5316,8 +5316,9 @@ function Library:CreateWindow(WindowInfo)
                 Position = true,
             },
         })
+        -- CORREÇÃO: UDim2.new trocado por UDim.new
         New("UICorner", {
-            CornerRadius = UDim2.new(0, WindowInfo.CornerRadius - 1),
+            CornerRadius = UDim.new(0, WindowInfo.CornerRadius - 1),
             Parent = MainFrame,
         })
         do
@@ -5443,8 +5444,9 @@ function Library:CreateWindow(WindowInfo)
             Visible = not (WindowInfo.DisableSearch or false),
             Parent = RightWrapper,
         })
+        -- CORREÇÃO: UDim2.new trocado por UDim.new
         New("UICorner", {
-            CornerRadius = UDim2.new(0, WindowInfo.CornerRadius),
+            CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
             Parent = SearchBox,
         })
         New("UIPadding", {
@@ -5506,8 +5508,9 @@ function Library:CreateWindow(WindowInfo)
                 end,
             })
         end
+        -- CORREÇÃO: UDim2.new trocado por UDim.new
         New("UICorner", {
-            CornerRadius = UDim2.new(0, WindowInfo.CornerRadius - 1),
+            CornerRadius = UDim.new(0, WindowInfo.CornerRadius - 1),
             Parent = BottomBar,
         })
 
@@ -5568,12 +5571,12 @@ function Library:CreateWindow(WindowInfo)
 
         --// Container \\--
         Container = New("Frame", {
-            AnchorPoint = Vector2.new(0, 0), -- MODIFICAÇÃO: AnchorPoint para facilitar o posicionamento
+            AnchorPoint = Vector2.new(0, 0),
             BackgroundColor3 = function()
                 return Library:GetBetterColor(Library.Scheme.BackgroundColor, 1)
             end,
             Name = "Container",
-            Position = UDim2.new(0, originalTabsWidth + 1, 0, 49), -- MODIFICAÇÃO: Posição inicial correta
+            Position = UDim2.new(0, originalTabsWidth + 1, 0, 49),
             Size = UDim2.new(1, -(originalTabsWidth + 1), 1, -70),
             Parent = MainFrame,
         })
@@ -5587,7 +5590,6 @@ function Library:CreateWindow(WindowInfo)
         })
     end
     
-    -- MODIFICAÇÃO: Função de animação aprimorada
     local function AnimateTabs()
         if collapseCoroutine then
             task.cancel(collapseCoroutine)
@@ -5598,7 +5600,6 @@ function Library:CreateWindow(WindowInfo)
         areTabsExpanded = true
 
         if not wasAlreadyExpanded then
-            -- Anima a expansão de todos os elementos necessários
             TweenService:Create(Tabs, Library.TweenInfo, { Size = UDim2.new(0, expandedTabsWidth, 1, -70) }):Play()
             TweenService:Create(Container, Library.TweenInfo, { 
                 Position = UDim2.new(0, expandedTabsWidth + 1, 0, 49),
@@ -5623,7 +5624,6 @@ function Library:CreateWindow(WindowInfo)
             if not areTabsExpanded then return end
             
             areTabsExpanded = false
-            -- Anima a retração de todos os elementos
             TweenService:Create(Tabs, Library.TweenInfo, { Size = UDim2.new(0, originalTabsWidth, 1, -70) }):Play()
             TweenService:Create(Container, Library.TweenInfo, { 
                 Position = UDim2.new(0, originalTabsWidth + 1, 0, 49),
