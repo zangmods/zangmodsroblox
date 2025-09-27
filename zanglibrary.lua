@@ -5280,6 +5280,14 @@ function Library:CreateWindow(WindowInfo)
     local ResizeButton
     local Tabs
     local Container
+    
+    -- MODIFICAÇÃO: Variáveis para controlar a animação de expansão das abas
+    local areTabsExpanded = false
+    local collapseCoroutine = nil
+    local originalTabsWidth, expandedTabsWidth = 60, 170
+    local originalTabButtonSize = UDim2.new(0, 48, 0, 48)
+    local expandedTabButtonSize = UDim2.new(0, 160, 0, 48)
+
     do
         Library.KeybindFrame, Library.KeybindContainer = Library:AddDraggableMenu("Keybinds")
         Library.KeybindFrame.AnchorPoint = Vector2.new(0, 0.5)
@@ -5315,7 +5323,7 @@ function Library:CreateWindow(WindowInfo)
                     Size = UDim2.new(1, 0, 0, 1),
                 },
                 {
-                    Position = UDim2.fromOffset(60, 0), 
+                    Position = UDim2.fromOffset(originalTabsWidth, 0),
                     Size = UDim2.new(0, 1, 1, -21),
                 },
                 {
@@ -5357,7 +5365,7 @@ function Library:CreateWindow(WindowInfo)
 
         local IconHolder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(0, 60, 1, 0),
+            Size = UDim2.new(0, originalTabsWidth, 1, 0),
             Parent = TopBar,
         })
         
@@ -5371,13 +5379,11 @@ function Library:CreateWindow(WindowInfo)
             })
         end
         
-        --// Top Right Bar
-        -- MODIFICAÇÃO: Posição e tamanho ajustados para criar um espaçamento.
         local RightWrapper = New("Frame", {
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 68, 0.5, 0), -- Posição movida para a direita (de 60 para 68).
-            Size = UDim2.new(1, -125, 1, -16), -- Tamanho ajustado para compensar a nova posição.
+            Position = UDim2.new(0, originalTabsWidth + 8, 0.5, 0),
+            Size = UDim2.new(1, -(originalTabsWidth + 65), 1, -16),
             Parent = TopBar,
         })
 
@@ -5509,7 +5515,6 @@ function Library:CreateWindow(WindowInfo)
             Parent = BottomBar,
         })
 
-        --// Footer
         New("TextLabel", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
@@ -5519,7 +5524,6 @@ function Library:CreateWindow(WindowInfo)
             Parent = BottomBar,
         })
 
-        --// Resize Button
         if WindowInfo.Resizable then
             ResizeButton = New("TextButton", {
                 AnchorPoint = Vector2.new(1, 0),
@@ -5556,8 +5560,9 @@ function Library:CreateWindow(WindowInfo)
             CanvasSize = UDim2.fromScale(0, 0),
             Position = UDim2.fromOffset(0, 49),
             ScrollBarThickness = 0,
-            Size = UDim2.new(0, 60, 1, -70),
+            Size = UDim2.new(0, originalTabsWidth, 1, -70),
             Parent = MainFrame,
+            ZIndex = 2, -- Para que as abas expandidas fiquem sobre o conteúdo
         })
 
         New("UIListLayout", {
@@ -5573,7 +5578,7 @@ function Library:CreateWindow(WindowInfo)
             end,
             Name = "Container",
             Position = UDim2.new(1, 0, 0, 49),
-            Size = UDim2.new(1, -61, 1, -70),
+            Size = UDim2.new(1, -(originalTabsWidth + 1), 1, -70),
             Parent = MainFrame,
         })
 
@@ -5584,6 +5589,52 @@ function Library:CreateWindow(WindowInfo)
             PaddingTop = UDim.new(0, 0),
             Parent = Container,
         })
+    end
+    
+    -- MODIFICAÇÃO: Função para animar a expansão e retração das abas
+    local function AnimateTabs()
+        if collapseCoroutine then
+            task.cancel(collapseCoroutine)
+            collapseCoroutine = nil
+        end
+
+        local wasAlreadyExpanded = areTabsExpanded
+        areTabsExpanded = true
+
+        -- Só executa a animação de expansão se não estiverem já expandidas
+        if not wasAlreadyExpanded then
+            TweenService:Create(Tabs, Library.TweenInfo, { Size = UDim2.new(0, expandedTabsWidth, 1, -70) }):Play()
+
+            for _, tab in pairs(Library.Tabs) do
+                if tab.Button and tab.NameLabel then
+                    tab.NameLabel.Visible = true
+                    TweenService:Create(tab.Button, Library.TweenInfo, { Size = expandedTabButtonSize }):Play()
+                    TweenService:Create(tab.NameLabel, Library.TweenInfo, { TextTransparency = 0 }):Play()
+                end
+            end
+        end
+
+        -- Agenda a retração
+        collapseCoroutine = task.delay(3, function()
+            if not areTabsExpanded then return end -- Prevenção de execução dupla
+            
+            areTabsExpanded = false
+            TweenService:Create(Tabs, Library.TweenInfo, { Size = UDim2.new(0, originalTabsWidth, 1, -70) }):Play()
+
+            for _, tab in pairs(Library.Tabs) do
+                if tab.Button and tab.NameLabel then
+                    TweenService:Create(tab.Button, Library.TweenInfo, { Size = originalTabButtonSize }):Play()
+                    TweenService:Create(tab.NameLabel, Library.TweenInfo, { TextTransparency = 1 }):Play()
+                    
+                    task.delay(Library.TweenInfo.Time, function()
+                        if not areTabsExpanded then
+                            tab.NameLabel.Visible = false
+                        end
+                    end)
+                end
+            end
+            collapseCoroutine = nil
+        end)
     end
     
     local Window = {}
@@ -5606,7 +5657,8 @@ function Library:CreateWindow(WindowInfo)
 
         local TabButton: TextButton
         local TabIcon
-        local SelectionIndicator -- MODIFICAÇÃO: Variável para o indicador
+        local SelectionIndicator
+        local TabNameLabel
 
         local TabContainer
         local TabLeft
@@ -5623,18 +5675,17 @@ function Library:CreateWindow(WindowInfo)
             TabButton = New("TextButton", {
                 BackgroundColor3 = "MainColor",
                 BackgroundTransparency = 1,
-                Size = UDim2.new(0, 48, 0, 48),
+                Size = originalTabButtonSize,
                 Text = "",
                 Parent = Tabs,
             })
             
-            -- MODIFICAÇÃO: Criação do indicador de aba ativa.
             SelectionIndicator = New("Frame", {
                 BackgroundColor3 = "AccentColor",
                 BorderSizePixel = 0,
                 Position = UDim2.fromScale(0, 0),
-                Size = UDim2.new(0, 3, 1, 0), -- Barra vertical de 3 pixels de largura.
-                Visible = false, -- Começa invisível.
+                Size = UDim2.new(0, 3, 1, 0),
+                Visible = false,
                 Parent = TabButton,
             })
             New("UICorner", { CornerRadius = UDim.new(0, 3), Parent = SelectionIndicator })
@@ -5642,18 +5693,32 @@ function Library:CreateWindow(WindowInfo)
             if Icon then
                 TabIcon = New("ImageLabel", {
                     AnchorPoint = Vector2.new(0.5, 0.5),
-                    Position = UDim2.fromScale(0.5, 0.5),
+                    Position = UDim2.new(0, 24, 0.5, 0), -- Centraliza nos primeiros 48px
                     Image = Icon.Url,
                     ImageColor3 = Icon.Custom and "White" or "AccentColor",
                     ImageRectOffset = Icon.ImageRectOffset,
                     ImageRectSize = Icon.ImageRectSize,
                     ImageTransparency = 0.5,
-                    Size = UDim2.new(1, -16, 1, -16),
+                    Size = UDim2.fromOffset(32, 32), -- Tamanho fixo para o ícone
                     Parent = TabButton,
                 })
             end
+            
+            -- MODIFICAÇÃO: Adiciona a label para o nome da aba
+            TabNameLabel = New("TextLabel", {
+                Name = "TabName",
+                AnchorPoint = Vector2.new(0, 0.5),
+                Position = UDim2.new(0, 52, 0.5, 0),
+                Size = UDim2.new(0, 100, 1, 0),
+                BackgroundTransparency = 1,
+                Text = Name,
+                TextSize = 14,
+                TextTransparency = 1, -- Começa invisível
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Visible = false, -- Começa escondida
+                Parent = TabButton,
+            })
 
-            -- O resto da criação da aba continua igual...
             TabContainer = New("Frame", {
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 1),
@@ -5783,7 +5848,9 @@ function Library:CreateWindow(WindowInfo)
         end
 
         local Tab = {
-            Indicator = SelectionIndicator, -- MODIFICAÇÃO: Armazena a referência ao indicador.
+            Button = TabButton,
+            NameLabel = TabNameLabel,
+            Indicator = SelectionIndicator,
             Groupboxes = {},
             Tabboxes = {},
             DependencyGroupboxes = {},
@@ -6216,7 +6283,6 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveTab:Hide()
             end
             
-            -- MODIFICAÇÃO: Torna o indicador visível.
             Tab.Indicator.Visible = true
 
             TweenService:Create(TabButton, Library.TweenInfo, {
@@ -6254,7 +6320,6 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
-            -- MODIFICAÇÃO: Esconde o indicador.
             Tab.Indicator.Visible = false
 
             TweenService:Create(TabButton, Library.TweenInfo, {
@@ -6286,7 +6351,11 @@ function Library:CreateWindow(WindowInfo)
         TabButton.MouseLeave:Connect(function()
             Tab:Hover(false)
         end)
-        TabButton.MouseButton1Click:Connect(Tab.Show)
+        
+        TabButton.MouseButton1Click:Connect(function()
+            Tab:Show()
+            AnimateTabs()
+        end)
 
         Library.Tabs[Name] = Tab
 
@@ -6296,19 +6365,19 @@ function Library:CreateWindow(WindowInfo)
     function Window:AddKeyTab(Name)
         local TabButton: TextButton
         local TabIcon
-        local SelectionIndicator -- MODIFICAÇÃO: Variável para o indicador da KeyTab
+        local SelectionIndicator
+        local TabNameLabel
         local TabContainer
 
         do
             TabButton = New("TextButton", {
                 BackgroundColor3 = "MainColor",
                 BackgroundTransparency = 1,
-                Size = UDim2.new(0, 48, 0, 48),
+                Size = originalTabButtonSize,
                 Text = "",
                 Parent = Tabs,
             })
             
-            -- MODIFICAÇÃO: Adiciona o indicador também para a KeyTab.
             SelectionIndicator = New("Frame", {
                 BackgroundColor3 = "AccentColor",
                 BorderSizePixel = 0,
@@ -6322,16 +6391,31 @@ function Library:CreateWindow(WindowInfo)
             if KeyIcon then
                 TabIcon = New("ImageLabel", {
                     AnchorPoint = Vector2.new(0.5, 0.5),
-                    Position = UDim2.fromScale(0.5, 0.5),
+                    Position = UDim2.new(0, 24, 0.5, 0),
                     Image = KeyIcon.Url,
                     ImageColor3 = "AccentColor",
                     ImageRectOffset = KeyIcon.ImageRectOffset,
                     ImageRectSize = KeyIcon.ImageRectSize,
                     ImageTransparency = 0.5,
-                    Size = UDim2.new(1, -16, 1, -16),
+                    Size = UDim2.fromOffset(32, 32),
                     Parent = TabButton,
                 })
             end
+
+            -- MODIFICAÇÃO: Adiciona a label para o nome da aba
+            TabNameLabel = New("TextLabel", {
+                Name = "TabName",
+                AnchorPoint = Vector2.new(0, 0.5),
+                Position = UDim2.new(0, 52, 0.5, 0),
+                Size = UDim2.new(0, 100, 1, 0),
+                BackgroundTransparency = 1,
+                Text = Name,
+                TextSize = 14,
+                TextTransparency = 1,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Visible = false,
+                Parent = TabButton,
+            })
 
             TabContainer = New("ScrollingFrame", {
                 AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -6356,7 +6440,9 @@ function Library:CreateWindow(WindowInfo)
         end
 
         local Tab = {
-            Indicator = SelectionIndicator, -- MODIFICAÇÃO: Armazena a referência.
+            Button = TabButton,
+            NameLabel = TabNameLabel,
+            Indicator = SelectionIndicator,
             Elements = {},
             IsKeyTab = true,
         }
@@ -6436,7 +6522,7 @@ function Library:CreateWindow(WindowInfo)
                 Library.ActiveTab:Hide()
             end
             
-            Tab.Indicator.Visible = true -- MODIFICAÇÃO: Mostra o indicador.
+            Tab.Indicator.Visible = true
 
             CurrentTabInfo.Visible = true
             if IsDefaultSearchbarSize then
@@ -6461,7 +6547,7 @@ function Library:CreateWindow(WindowInfo)
         end
 
         function Tab:Hide()
-            Tab.Indicator.Visible = false -- MODIFICAÇÃO: Esconde o indicador.
+            Tab.Indicator.Visible = false
 
             CurrentTabInfo.Visible = false
             if IsDefaultSearchbarSize then
@@ -6491,7 +6577,11 @@ function Library:CreateWindow(WindowInfo)
         TabButton.MouseLeave:Connect(function()
             Tab:Hover(false)
         end)
-        TabButton.MouseButton1Click:Connect(Tab.Show)
+        
+        TabButton.MouseButton1Click:Connect(function()
+            Tab:Show()
+            AnimateTabs()
+        end)
 
         Tab.Container = TabContainer
         setmetatable(Tab, BaseGroupbox)
